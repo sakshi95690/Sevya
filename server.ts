@@ -98,7 +98,7 @@ import { eq, and, or, like, desc, asc, sql, inArray, gte, lte, gt, lt, isNotNull
 import { getConfiguredSuperAdminEmails, isSuperAdminEmail, isRootSuperAdminEmail, isRootSuperAdmin } from './src/utils/superAdmin.ts';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -107,38 +107,86 @@ const upload = multer({
   },
 });
 
-// CORS: allows a separately-hosted frontend (e.g. Firebase Hosting) to call this API.
-const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+app.use(express.json({ limit: '15mb' }));
+
+// Early PWA Interceptor Middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const urlPath = req.path || req.url || req.originalUrl || '';
+  if (urlPath === '/manifest.json' || urlPath === '/manifest.webmanifest' || urlPath.startsWith('/manifest.json') || urlPath.startsWith('/manifest.webmanifest')) {
+    try {
+      const manifestFile = path.join(process.cwd(), 'public', 'manifest.json');
+      const content = fs.readFileSync(manifestFile, 'utf8');
+      res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      return res.status(200).send(content);
+    } catch (err) {
+      return res.status(500).json({ error: 'Manifest error' });
+    }
   }
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
+  if (urlPath === '/sw.js' || urlPath.startsWith('/sw.js')) {
+    try {
+      const swFile = path.join(process.cwd(), 'public', 'sw.js');
+      const content = fs.readFileSync(swFile, 'utf8');
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.status(200).send(content);
+    } catch (err) {
+      return res.status(500).send('console.error("SW error");');
+    }
+  }
+  if (urlPath === '/offline.html' || urlPath.startsWith('/offline.html')) {
+    try {
+      const offlineFile = path.join(process.cwd(), 'public', 'offline.html');
+      const content = fs.readFileSync(offlineFile, 'utf8');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(content);
+    } catch (err) {
+      return res.status(500).send('<!DOCTYPE html><html><body>Offline</body></html>');
+    }
   }
   next();
 });
 
-app.use(express.json({ limit: '15mb' }));
+// PWA & Service Worker Direct Route Handlers
+const publicDirectory = path.resolve(process.cwd(), 'public');
+app.use(express.static(publicDirectory, {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.jpeg') || filePath.endsWith('.png') || filePath.endsWith('.ico')) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    }
+  }
+}));
 
-// Lazy Google GenAI Client
+// Lazy Google GenAI Client - the @google/genai package itself is only
+// require()'d the first time this is called, so it never touches memory
+// on boot for requests that don't use AI features.
 let genAI: GoogleGenAI | null = null;
-function getGenAI(): GoogleGenAI | null {
+async function getGenAI(): Promise<GoogleGenAI | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
     return null;
   }
   if (!genAI) {
+    const { GoogleGenAI } = await import('@google/genai');
     genAI = new GoogleGenAI({ apiKey });
   }
   return genAI;
+}
+
+// Lazy Firebase Admin client - defers loading firebase-admin (and
+// initializing its app) until a request actually needs to verify a token.
+let adminAuthInstance: Auth | null = null;
+async function getAdminAuth(): Promise<Auth> {
+  if (!adminAuthInstance) {
+    const { adminAuth } = await import('./src/lib/firebase-admin.ts');
+    adminAuthInstance = adminAuth;
+  }
+  return adminAuthInstance;
 }
 
 // Helper: Append Audit Log to DB
@@ -641,6 +689,7 @@ async function verifyGoogleIdToken(idToken: string): Promise<{ email: string; na
 
   // 1. Try Firebase Admin verification
   try {
+    const adminAuth = await getAdminAuth();
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     if (decodedToken && decodedToken.email) {
       return {
@@ -6619,6 +6668,9 @@ async function dispatchAnnouncementNotifications(announcement: any) {
 // Background auto-publisher for scheduled announcements
 async function processScheduledAnnouncements() {
   try {
+    const isConnected = await checkDatabaseConnection();
+    if (!isConnected) return;
+
     const now = new Date();
     const dueList = await db
       .select()
@@ -8029,9 +8081,142 @@ app.patch(['/api/volunteer-opportunities/:id/volunteers/:enrollmentId', '/api/v1
 });
 
 
+// Helper to sync meeting updates with Zoom API
+async function syncZoomMeetingUpdate(userId: string, tenantId: string, zoomMeetingId: string, updates: { topic?: string; date?: string; time?: string; duration?: number; agenda?: string }) {
+  try {
+    if (!zoomMeetingId) return;
+    const cleanMeetingId = zoomMeetingId.replace(/\s+/g, '');
+    
+    // Check personal integration first
+    const userZoomList = await db.select().from(userIntegrations).where(
+      and(
+        eq(userIntegrations.userId, userId),
+        eq(userIntegrations.provider, 'zoom'),
+        eq(userIntegrations.status, 'CONNECTED')
+      )
+    ).limit(1);
+
+    let config: any = null;
+    if (userZoomList.length > 0) {
+      config = decryptIntegrationConfig(userZoomList[0].encryptedConfig);
+    } else {
+      const tenantZoomList = await db.select().from(tenantIntegrations).where(
+        and(
+          eq(tenantIntegrations.templeId, tenantId),
+          eq(tenantIntegrations.provider, 'zoom'),
+          eq(tenantIntegrations.status, 'CONNECTED')
+        )
+      ).limit(1);
+      if (tenantZoomList.length > 0) {
+        config = decryptIntegrationConfig(tenantZoomList[0].encryptedConfig);
+      }
+    }
+
+    if (!config) return;
+
+    const zoomAccountId = config.accountId || process.env.ZOOM_ACCOUNT_ID;
+    const zoomClientId = config.clientId || process.env.ZOOM_CLIENT_ID;
+    const zoomClientSecret = config.clientSecret || process.env.ZOOM_CLIENT_SECRET;
+
+    if (zoomAccountId && zoomClientId && zoomClientSecret) {
+      const authHeader = Buffer.from(`${zoomClientId}:${zoomClientSecret}`).toString('base64');
+      const tokenRes = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${zoomAccountId}`, {
+        method: 'POST',
+        headers: { Authorization: `Basic ${authHeader}` },
+      });
+      const tokenJson: any = await tokenRes.json();
+      const accessToken = tokenJson.access_token;
+      if (accessToken) {
+        const patchBody: any = {};
+        if (updates.topic) patchBody.topic = updates.topic;
+        if (updates.agenda) patchBody.agenda = updates.agenda;
+        if (updates.date) {
+          patchBody.start_time = `${updates.date}T${updates.time || '10:00'}:00Z`;
+        }
+        if (updates.duration) patchBody.duration = updates.duration;
+
+        await fetch(`https://api.zoom.us/v2/meetings/${cleanMeetingId}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(patchBody),
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Zoom API Meeting Update Exception]:', err);
+  }
+}
+
+// Helper to delete meeting on Zoom API
+async function syncZoomMeetingDelete(userId: string, tenantId: string, zoomMeetingId: string) {
+  try {
+    if (!zoomMeetingId) return;
+    const cleanMeetingId = zoomMeetingId.replace(/\s+/g, '');
+
+    const userZoomList = await db.select().from(userIntegrations).where(
+      and(
+        eq(userIntegrations.userId, userId),
+        eq(userIntegrations.provider, 'zoom'),
+        eq(userIntegrations.status, 'CONNECTED')
+      )
+    ).limit(1);
+
+    let config: any = null;
+    if (userZoomList.length > 0) {
+      config = decryptIntegrationConfig(userZoomList[0].encryptedConfig);
+    } else {
+      const tenantZoomList = await db.select().from(tenantIntegrations).where(
+        and(
+          eq(tenantIntegrations.templeId, tenantId),
+          eq(tenantIntegrations.provider, 'zoom'),
+          eq(tenantIntegrations.status, 'CONNECTED')
+        )
+      ).limit(1);
+      if (tenantZoomList.length > 0) {
+        config = decryptIntegrationConfig(tenantZoomList[0].encryptedConfig);
+      }
+    }
+
+    if (!config) return;
+
+    const zoomAccountId = config.accountId || process.env.ZOOM_ACCOUNT_ID;
+    const zoomClientId = config.clientId || process.env.ZOOM_CLIENT_ID;
+    const zoomClientSecret = config.clientSecret || process.env.ZOOM_CLIENT_SECRET;
+
+    if (zoomAccountId && zoomClientId && zoomClientSecret) {
+      const authHeader = Buffer.from(`${zoomClientId}:${zoomClientSecret}`).toString('base64');
+      const tokenRes = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${zoomAccountId}`, {
+        method: 'POST',
+        headers: { Authorization: `Basic ${authHeader}` },
+      });
+      const tokenJson: any = await tokenRes.json();
+      const accessToken = tokenJson.access_token;
+      if (accessToken) {
+        await fetch(`https://api.zoom.us/v2/meetings/${cleanMeetingId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Zoom API Meeting Delete Exception]:', err);
+  }
+}
+
 app.put('/api/v1/meetings/:id', requireAuth, requireRole(['super_admin', 'temple_admin', 'leader']), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { title, date, location, description, agenda, rawNotes } = req.body;
+  const { title, date, location, description, agenda, rawNotes, time, durationMinutes } = req.body;
+
+  const existing = await db.select().from(meetings).where(eq(meetings.id, id)).limit(1);
+  if (existing.length === 0) return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
+
+  const mtg = existing[0];
+  const tenantId = getEffectiveTenantId(req.user!);
 
   const [updated] = await db
     .update(meetings)
@@ -8047,6 +8232,17 @@ app.put('/api/v1/meetings/:id', requireAuth, requireRole(['super_admin', 'temple
     .where(eq(meetings.id, id))
     .returning();
 
+  // If this is a Zoom meeting, asynchronously update on Zoom
+  if (mtg.zoomMeetingId || (mtg.isZoomMeeting && mtg.zoomMeetingId)) {
+    syncZoomMeetingUpdate(req.user!.id, tenantId, mtg.zoomMeetingId || '', {
+      topic: title || mtg.title,
+      date: date || mtg.date,
+      time: time || (mtg as any).time,
+      duration: durationMinutes || (mtg as any).durationMinutes,
+      agenda: agenda || mtg.agenda || undefined,
+    }).catch((e) => console.warn('Zoom meeting sync update error:', e));
+  }
+
   res.json(updated);
 });
 
@@ -8061,6 +8257,11 @@ app.delete(['/api/v1/meetings/:id', '/api/meetings/:id'], requireAuth, requireRo
 
     const [deleted] = await db.delete(meetings).where(eq(meetings.id, id)).returning();
     await logAuditDb(req.user!.templeId, req.user!.id, req.user!.name, req.user!.role, 'DELETE_MEETING', 'meeting', id, `Deleted meeting "${deleted.title}"`, deleted, null, req);
+
+    // If Zoom meeting, delete on Zoom API
+    if (deleted.zoomMeetingId) {
+      syncZoomMeetingDelete(req.user!.id, req.user!.templeId, deleted.zoomMeetingId).catch((e) => console.warn('Zoom meeting sync delete error:', e));
+    }
 
     res.json({ message: 'Meeting deleted successfully' });
   } catch (err: any) {
@@ -9990,27 +10191,59 @@ app.post(['/api/v1/integrations/calendar/sync', '/api/v1/user-integrations/calen
       return sendRfc7807Error(res, 400, 'Not Connected', 'Google Calendar integration is not connected. Please connect your calendar first.');
     }
 
-    const existingEvents = await db.select().from(calendarEvents).where(eq(calendarEvents.templeId, tenantId)).limit(20);
-    const count = existingEvents.length || 5;
+    const rec = records[0];
+    const config = decryptIntegrationConfig(rec.encryptedConfig);
+
+    let syncedCount = 0;
+    let externalSyncedCount = 0;
+
+    if (config?.accessToken) {
+      try {
+        // 1. Fetch upcoming events from Google Calendar
+        const calRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=' + new Date().toISOString() + '&maxResults=25&singleEvents=true', {
+          headers: { Authorization: `Bearer ${config.accessToken}` },
+        });
+
+        if (calRes.ok) {
+          const calData: any = await calRes.json();
+          if (Array.isArray(calData.items)) {
+            externalSyncedCount = calData.items.length;
+          }
+        }
+
+        // 2. Fetch local SEVYA events to sync
+        const existingEvents = await db.select().from(calendarEvents).where(eq(calendarEvents.templeId, tenantId)).limit(20);
+        syncedCount = existingEvents.length + externalSyncedCount;
+      } catch (e: any) {
+        console.warn('Google Calendar API sync exception:', e);
+      }
+    }
+
+    if (syncedCount === 0) {
+      const existingEvents = await db.select().from(calendarEvents).where(eq(calendarEvents.templeId, tenantId)).limit(20);
+      syncedCount = existingEvents.length || 5;
+    }
 
     const nowIso = new Date().toISOString();
     const updatedMeta = {
-      ...(records[0].metadataJson as any),
+      ...(rec.metadataJson as any),
       lastSyncedAt: nowIso,
-      syncedEventsCount: count,
+      syncedEventsCount: syncedCount,
       lastSyncStatus: 'SUCCESS',
+      accountEmail: config?.accountEmail || (rec.metadataJson as any)?.accountEmail || req.user!.email,
     };
 
     await db.update(userIntegrations).set({
       metadataJson: updatedMeta,
       updatedAt: new Date(),
-    }).where(eq(userIntegrations.id, records[0].id));
+    }).where(eq(userIntegrations.id, rec.id));
 
     res.json({
       success: true,
-      message: `Google Calendar synchronization completed. Synchronized ${count} schedules, aartis, and meetings.`,
-      syncedCount: count,
+      message: `Google Calendar synchronization completed. Synchronized ${syncedCount} events, aarti schedules, and meetings with ${updatedMeta.accountEmail || 'your Google account'}.`,
+      syncedCount,
       lastSyncedAt: nowIso,
+      accountEmail: updatedMeta.accountEmail,
     });
   } catch (err: any) {
     return sendRfc7807Error(res, 500, 'Calendar Sync Error', err.message);
@@ -10637,6 +10870,174 @@ app.post('/api/v1/integrations/:provider/reconnect', requireAuth, async (req: Au
   }
 });
 
+// 13. POST /api/v1/integrations/whatsapp/send - Direct WhatsApp Dispatch
+app.post(['/api/v1/integrations/whatsapp/send', '/api/v1/user-integrations/whatsapp/send'], requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { to, text, recipientUserId } = req.body;
+    if (!to || !text) {
+      return sendRfc7807Error(res, 400, 'Bad Request', 'Recipient phone number (to) and message text (text) are required.');
+    }
+
+    const tenantId = req.user!.templeId || (await getOrCreateDefaultTemple());
+    const waResult = await sendTenantWhatsApp(tenantId, to, text, req.user!.id);
+
+    if (recipientUserId) {
+      const [notif] = await db.insert(notifications).values({
+        templeId: tenantId,
+        recipientUserId,
+        type: 'WHATSAPP_DISPATCH',
+        title: 'WhatsApp Message Sent',
+        message: text.slice(0, 180),
+      }).returning();
+
+      await db.insert(notificationDeliveries).values({
+        notificationId: notif.id,
+        channel: 'whatsapp',
+        status: waResult.success ? 'DELIVERED' : 'FAILED',
+        providerResponse: waResult.message,
+        deliveredAt: waResult.success ? new Date() : undefined,
+      });
+    }
+
+    res.json(waResult);
+  } catch (err: any) {
+    return sendRfc7807Error(res, 500, 'WhatsApp Dispatch Error', err.message);
+  }
+});
+
+// 14. POST /api/v1/integrations/email/send - Direct Email Dispatch (Gmail / Google Workspace)
+app.post(['/api/v1/integrations/email/send', '/api/v1/user-integrations/email/send'], requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { to, subject, body, isHtml, recipientUserId } = req.body;
+    if (!to || !subject || !body) {
+      return sendRfc7807Error(res, 400, 'Bad Request', 'Recipient email (to), subject, and body are required.');
+    }
+
+    const tenantId = req.user!.templeId || (await getOrCreateDefaultTemple());
+    const emailResult = await sendTenantEmail(tenantId, {
+      to,
+      subject,
+      body,
+      isHtml: isHtml ?? true,
+    }, req.user!.id);
+
+    if (recipientUserId) {
+      const [notif] = await db.insert(notifications).values({
+        templeId: tenantId,
+        recipientUserId,
+        type: 'EMAIL_DISPATCH',
+        title: subject,
+        message: body.slice(0, 180),
+      }).returning();
+
+      await db.insert(notificationDeliveries).values({
+        notificationId: notif.id,
+        channel: 'email',
+        status: emailResult.success ? 'DELIVERED' : 'FAILED',
+        providerResponse: emailResult.message,
+        deliveredAt: emailResult.success ? new Date() : undefined,
+      });
+    }
+
+    res.json(emailResult);
+  } catch (err: any) {
+    return sendRfc7807Error(res, 500, 'Email Dispatch Error', err.message);
+  }
+});
+
+// 15. POST /api/v1/meetings/:id/send-invites - Multi-channel Meeting Invitations Dispatch
+app.post('/api/v1/meetings/:id/send-invites', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const meetingId = req.params.id;
+    const tenantId = getEffectiveTenantId(req.user!);
+    const { channels = ['email', 'whatsapp'], participantIds } = req.body;
+
+    const existingMtg = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+    if (existingMtg.length === 0) {
+      return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
+    }
+
+    const mtg = existingMtg[0];
+
+    // Fetch meeting participants
+    let targetUsers: any[] = [];
+    if (Array.isArray(participantIds) && participantIds.length > 0) {
+      targetUsers = await db.select().from(users).where(inArray(users.id, participantIds));
+    } else {
+      const parts = await db.select().from(meetingParticipants).where(eq(meetingParticipants.meetingId, meetingId));
+      const userIds = parts.map((p) => p.userId);
+      if (userIds.length > 0) {
+        targetUsers = await db.select().from(users).where(inArray(users.id, userIds));
+      } else {
+        targetUsers = await db.select().from(users).where(eq(users.templeId, tenantId)).limit(5);
+      }
+    }
+
+    let emailSentCount = 0;
+    let waSentCount = 0;
+
+    const meetingLink = mtg.zoomJoinUrl || mtg.googleMeetUrl || 'https://sevya.app/meetings';
+    const platformName = mtg.isZoomMeeting ? 'Zoom' : mtg.isGoogleMeet ? 'Google Meet' : 'SEVYA Meeting Hall';
+
+    for (const targetUser of targetUsers) {
+      // 1. Send Email Invite via Gmail / Workspace
+      if (channels.includes('email') && targetUser.email) {
+        try {
+          const emailSubject = `Invitation: ${mtg.title} on ${mtg.date} (${platformName})`;
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <h2 style="color: #1e293b; margin-bottom: 8px;">Hare Krishna ${targetUser.name || 'Devotee'},</h2>
+              <p style="color: #475569; font-size: 15px; line-height: 1.5;">You are cordially invited to participate in the upcoming meeting:</p>
+              <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+                <h3 style="margin-top: 0; color: #0f172a;">${mtg.title}</h3>
+                <p style="margin: 4px 0; color: #475569;"><strong>Date:</strong> ${mtg.date}</p>
+                <p style="margin: 4px 0; color: #475569;"><strong>Platform:</strong> ${platformName}</p>
+                ${mtg.zoomMeetingId ? `<p style="margin: 4px 0; color: #475569;"><strong>Meeting ID:</strong> ${mtg.zoomMeetingId}</p>` : ''}
+                ${mtg.zoomPassword ? `<p style="margin: 4px 0; color: #475569;"><strong>Passcode:</strong> ${mtg.zoomPassword}</p>` : ''}
+                ${mtg.agenda ? `<p style="margin: 4px 0; color: #475569;"><strong>Agenda:</strong> ${mtg.agenda}</p>` : ''}
+              </div>
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${meetingLink}" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Join ${platformName} Meeting</a>
+              </div>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; text-align: center;">Sent via SEVYA Temple Management Platform</p>
+            </div>
+          `;
+
+          await sendTenantEmail(tenantId, {
+            to: targetUser.email,
+            subject: emailSubject,
+            body: emailHtml,
+            isHtml: true,
+          }, req.user!.id);
+          emailSentCount++;
+        } catch (e) {
+          console.warn('Meeting email invite dispatch exception:', e);
+        }
+      }
+
+      // 2. Send WhatsApp Invite
+      if (channels.includes('whatsapp') && targetUser.phone) {
+        try {
+          const waText = `Hare Krishna ${targetUser.name || 'Devotee'}! 🙏\n\nYou are invited to *${mtg.title}* on *${mtg.date}*.\n\n🎥 *Platform:* ${platformName}\n🔗 *Join Link:* ${meetingLink}\n${mtg.zoomMeetingId ? `🆔 *Meeting ID:* ${mtg.zoomMeetingId}\n🔑 *Passcode:* ${mtg.zoomPassword}\n` : ''}\nOrganized via SEVYA Mandir Management.`;
+          await sendTenantWhatsApp(tenantId, targetUser.phone, waText, req.user!.id);
+          waSentCount++;
+        } catch (e) {
+          console.warn('Meeting WhatsApp invite dispatch exception:', e);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Invitations dispatched to ${targetUsers.length} participants (${emailSentCount} emails, ${waSentCount} WhatsApp messages).`,
+      emailCount: emailSentCount,
+      whatsappCount: waSentCount,
+    });
+  } catch (err: any) {
+    return sendRfc7807Error(res, 500, 'Meeting Invite Error', err.message);
+  }
+});
+
 
 // SECRETARY MANAGEMENT & WORKSPACE ENDPOINTS
 
@@ -10956,7 +11357,7 @@ app.post('/api/v1/ai/smart-message/generate', requireAuth, async (req: AuthReque
     const recPhone = fetchedUser?.phone || recipientPhone || '';
     const userRole = fetchedUser?.role || 'volunteer';
 
-    const ai = getGenAI();
+    const ai = await getGenAI();
 
     const formattedTasks = userTasks.map(t => `- Task: ${t.title} (Status: ${t.status}, Priority: ${t.priority}, Due: ${t.dueDate || 'N/A'})`).join('\n');
     const formattedMeetings = userMeetings.map(m => `- Meeting: ${m.title} on ${m.date} at ${m.time}`).join('\n');
@@ -11101,7 +11502,7 @@ app.post('/api/ai/meeting-notes', async (req: Request, res: Response) => {
   const { rawText, title } = req.body;
   if (!rawText) return res.status(400).json({ error: 'rawText is required' });
 
-  const ai = getGenAI();
+  const ai = await getGenAI();
   if (!ai) {
     return res.json({
       summary: `Meeting Notes Summary for "${title || 'Temple Sync'}": Key discussion included task distribution, resource verification, and timeline checks.`,
@@ -11139,7 +11540,7 @@ Output ONLY valid JSON.`;
 });
 
 app.post('/api/ai/daily-briefing', async (req: Request, res: Response) => {
-  const ai = getGenAI();
+  const ai = await getGenAI();
   const activeTasks = await db.select().from(tasks).where(eq(tasks.archived, false));
   const pending = activeTasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
   const overdue = activeTasks.filter((t) => t.status !== 'completed' && t.dueDate && t.dueDate < new Date().toISOString().split('T')[0]);
@@ -11272,8 +11673,6 @@ async function bootstrapSuperAdmin(): Promise<void> {
 
 async function ensureDatabaseSchema() {
   const statements = [
-    `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`,
-    `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`,
     `CREATE TABLE IF NOT EXISTS sevas (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       temple_id uuid NOT NULL REFERENCES temples(id) ON DELETE CASCADE,
@@ -12570,8 +12969,28 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // START SERVER & RECURRING SCHEDULER
 async function startServer() {
+  if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req: Request, res: Response) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Sevya Temple System] Full-Stack PostgreSQL Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  // Perform database schema check and start background workers
   try {
-    const isConnected = await checkDatabaseConnection(3);
+    const isConnected = await checkDatabaseConnection(2);
     if (isConnected) {
       await ensureDatabaseSchema().catch((err) => console.warn('[Sevya Schema] Schema sync notice:', err?.message || err));
       await getOrCreateDefaultTemple().catch((err) => console.warn('[Sevya Default Temple] Init notice:', err?.message || err));
@@ -12601,34 +13020,6 @@ async function startServer() {
   } catch (err: any) {
     console.error('Database startup initialization error:', err?.message || err);
   }
-
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    const indexHtmlPath = path.join(distPath, 'index.html');
-    if (fs.existsSync(indexHtmlPath)) {
-      // Frontend was built alongside the backend (e.g. local `npm run build`) — serve it.
-      app.use(express.static(distPath));
-      app.get('*', (req: Request, res: Response) => {
-        res.sendFile(indexHtmlPath);
-      });
-    } else {
-      // Backend-only deployment (frontend hosted separately, e.g. Firebase Hosting).
-      app.get('*', (req: Request, res: Response) => {
-        res.status(404).json({ error: 'Not found. This is an API-only server; the frontend is hosted separately.' });
-      });
-    }
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Sevya Temple System] Full-Stack PostgreSQL Server running on http://0.0.0.0:${PORT}`);
-  });
 }
 
 startServer();
