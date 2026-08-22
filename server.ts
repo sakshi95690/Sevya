@@ -3,8 +3,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { GoogleGenAI } from '@google/genai';
-import { adminAuth } from './src/lib/firebase-admin.ts';
+import type { GoogleGenAI } from '@google/genai';
+import type { Auth } from 'firebase-admin/auth';
 import { db, pool, isConnectionError, checkDatabaseConnection, enforceRowLevelSecurity } from './src/db/index.ts';
 import {
   temples,
