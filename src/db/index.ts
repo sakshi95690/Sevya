@@ -1143,13 +1143,24 @@ export const pool: pg.Pool = new Proxy(pgPool, {
   }
 }) as any;
 
-const pgliteDb = drizzlePglite(getPgliteInstance(), { schema });
+// PGlite (embedded WASM Postgres) is only needed as a dev/offline fallback.
+// It must NOT be constructed unless we actually fall back to it - building it
+// unconditionally at import time was loading a full WASM Postgres into memory
+// on every boot, even in production with a real DATABASE_URL configured.
+// THIS is what was causing the Render "out of memory (used over 512Mi)" crash.
+let _pgliteDb: ReturnType<typeof drizzlePglite> | null = null;
+const getPgliteDb = () => {
+  if (!_pgliteDb) {
+    _pgliteDb = drizzlePglite(getPgliteInstance(), { schema });
+  }
+  return _pgliteDb;
+};
 const pgDb = drizzlePg(pool, { schema });
 
 // Proxy DB object
 export const db = new Proxy({} as any, {
   get(_target, prop) {
-    const activeDriver = isPgliteActive ? pgliteDb : pgDb;
+    const activeDriver = isPgliteActive ? getPgliteDb() : pgDb;
     const value = (activeDriver as any)[prop];
     return typeof value === 'function' ? value.bind(activeDriver) : value;
   }
@@ -1203,4 +1214,3 @@ process.on('SIGTERM', async () => {
   }
   process.exit(0);
 });
-
