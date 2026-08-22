@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  sevya-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sevya-tpms-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=jdbc:postgresql://sevya-db:5432/sevya_db
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-sevya_user}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-sevya_secure_password_2026}
+      - REDIS_HOST=sevya-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      - SLACK_ENABLED=${SLACK_ENABLED:-false}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED:-false}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
+      - WHATSAPP_API_URL=${WHATSAPP_API_URL:-https://graph.facebook.com/v18.0}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-}
+      - BOOTSTRAP_SECRET=${BOOTSTRAP_SECRET:-sevya_bootstrap_secret_2026}
+    depends_on:
+      sevya-db:
+        condition: service_healthy
+      sevya-redis:
+        condition: service_healthy
+    networks:
+      - sevya-network
+
+  sevya-db:
+    image: postgres:16-alpine
+    container_name: sevya-tpms-db
+    restart: always
+    environment:
+      POSTGRES_DB: sevya_db
+      POSTGRES_USER: ${DATABASE_USERNAME:-sevya_user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-sevya_secure_password_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sevya-network
+
+  sevya-redis:
+    image: redis:7-alpine
+    container_name: sevya-tpms-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sevya-network
+
+networks:
+  sevya-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

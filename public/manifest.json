@@ -1,0 +1,84 @@
+{
+  "id": "/?source=pwa",
+  "name": "SEVYA — Temple & Seva Project Management",
+  "short_name": "SEVYA",
+  "description": "Organize Every Seva. Track Every Responsibility. Serve with Transparency.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#d97706",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "management",
+    "utilities",
+    "business"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View temple operations dashboard",
+      "url": "/#dashboard",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tasks & Seva",
+      "short_name": "Tasks",
+      "description": "Manage assigned seva and responsibilities",
+      "url": "/#tasks",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "description": "View temple initiatives and departments",
+      "url": "/#projects",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Meetings",
+      "short_name": "Meetings",
+      "description": "View scheduled meetings and minutes",
+      "url": "/#meetings",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Announcements",
+      "short_name": "Announcements",
+      "description": "Check temple broadcasts and notices",
+      "url": "/#announcements",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

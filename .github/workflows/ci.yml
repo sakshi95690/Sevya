@@ -1,0 +1,83 @@
+name: SEVYA CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  backend-build-and-test:
+    name: Backend Build & Verification
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sevya_db
+          POSTGRES_USER: sevya_user
+          POSTGRES_PASSWORD: sevya_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build and Test Backend with Maven
+        working-directory: ./sevya-backend
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          DATABASE_URL: jdbc:postgresql://localhost:5432/sevya_db
+          DATABASE_USERNAME: sevya_user
+          DATABASE_PASSWORD: sevya_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: |
+          mvn clean verify
+
+  frontend-build-and-check:
+    name: Frontend Build & Lint Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: TypeScript Type Checking & Linting
+        run: npm run lint
+
+      - name: Build Production Frontend
+        run: npm run build

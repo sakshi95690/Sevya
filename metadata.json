@@ -1,0 +1,6 @@
+{
+  "name": "Sevya",
+  "description": "Temple & Seva Project Management System - Organize Every Seva. Track Every Responsibility. Serve with Transparency.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

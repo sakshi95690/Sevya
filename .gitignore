@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+*.pem
+.env*
+!.env.example
+node_modules/
+.pgdata/
+.env
+dist/
+firebase-service-account.json
+firebase-applet-config.json
+firebase-service-account.json
