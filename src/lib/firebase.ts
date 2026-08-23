@@ -47,6 +47,4 @@ googleAuthProvider.setCustomParameters({
 });
 
 // Add Google Workspace scopes for Gmail and Google Calendar
-googleAuthProvider.addScope('https://www.googleapis.com/auth/gmail.send');
-googleAuthProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-googleAuthProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+
