@@ -115,7 +115,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
   next();
 });
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;;
 
 const upload = multer({
   storage: multer.memoryStorage(),
