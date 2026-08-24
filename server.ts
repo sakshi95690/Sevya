@@ -98,14 +98,17 @@ import { eq, and, or, like, desc, asc, sql, inArray, gte, lte, gt, lt, isNotNull
 import { getConfiguredSuperAdminEmails, isSuperAdminEmail, isRootSuperAdminEmail, isRootSuperAdmin } from './src/utils/superAdmin.ts';
 
 const app = express();
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : ['https://sevya-tms.web.app', 'https://sevya-tms.firebaseapp.com', 'http://localhost:5173'];
+
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const allowedOrigins = ['https://sevya-tms.web.app', 'https://sevya-tms.firebaseapp.com', 'http://localhost:5173'];
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
