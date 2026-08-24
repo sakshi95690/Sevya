@@ -1,5 +1,30 @@
 // Centralized HTTP API Client with RFC 7807 Error Handling, Token Rotation, and Correlation ID
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+
+/**
+ * Returns the effective API Base URL for SEVYA.
+ * In production builds without an explicit env variable, defaults to the production Render backend.
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // If running in browser on Firebase Hosting or custom domains, route to Render production backend
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const host = window.location.hostname.toLowerCase();
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+    const isCloudRunDev = host.includes('.run.app');
+
+    if (!isLocalhost && !isCloudRunDev) {
+      return 'https://sevya-backend.onrender.com';
+    }
+  }
+
+  return '/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ProblemDetail {
   type?: string;
@@ -74,6 +99,30 @@ function addRefreshSubscriber(cb: (token: string) => void) {
   refreshSubscribers.push(cb);
 }
 
+// Helper: Build absolute or normalized endpoint URL
+export function buildApiUrl(endpoint: string): string {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (baseUrl === '/api') {
+    if (cleanEndpoint.startsWith('/api/')) {
+      return cleanEndpoint;
+    }
+    return `/api${cleanEndpoint}`;
+  }
+
+  // baseUrl is an absolute origin like https://sevya-backend.onrender.com or https://sevya-backend.onrender.com/api
+  if (baseUrl.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+    return `${baseUrl}${cleanEndpoint.slice(4)}`;
+  }
+
+  return `${baseUrl}${cleanEndpoint}`;
+}
+
 // Helper: Perform token refresh
 async function handleTokenRefresh(): Promise<string> {
   const currentRefreshToken = getRefreshToken();
@@ -81,7 +130,8 @@ async function handleTokenRefresh(): Promise<string> {
     throw new ApiError('No refresh token available', 401);
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+  const refreshUrl = buildApiUrl('/v1/auth/refresh');
+  const res = await fetch(refreshUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken: currentRefreshToken }),
@@ -119,9 +169,7 @@ export async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const url = endpoint.startsWith('http')
-    ? endpoint
-    : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   try {
     const res = await fetch(url, {
@@ -180,6 +228,10 @@ export async function request<T>(
     if (err instanceof ApiError) {
       throw err;
     }
-    throw new ApiError(err.message || 'Network connection failure', 0);
+    const isNetworkError = err.message === 'Failed to fetch' || err.name === 'TypeError';
+    const helpfulMsg = isNetworkError
+      ? 'Unable to connect to SEVYA Backend API. Please check your internet connection or verify the backend server status.'
+      : (err.message || 'Network connection failure');
+    throw new ApiError(helpfulMsg, 0);
   }
 }
