@@ -1148,7 +1148,6 @@ export default function App() {
               users={users}
               currentUser={currentUser}
               temple={temple}
-              announcements={announcements}
               meetings={meetings}
               notifications={notifications}
               onOpenProofModal={(t) => setProofTask(t)}
