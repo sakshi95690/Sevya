@@ -5,23 +5,31 @@ let adminApp: App;
 
 if (!getApps().length) {
   let credential;
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  const rawSa = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  if (rawSa) {
     try {
-      const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      // Support both direct JSON string and Base64 encoded JSON
+      const jsonStr = rawSa.startsWith('{') ? rawSa : Buffer.from(rawSa, 'base64').toString('utf-8');
+      const sa = JSON.parse(jsonStr);
       credential = cert(sa);
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn('[FirebaseAdmin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err);
     }
   }
 
+  const effectiveProjectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    process.env.VITE_FIREBASE_PROJECT_ID ||
+    'sevya-tms';
+
   if (!credential) {
-    // Default dummy credential for local dev mode
     adminApp = initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'sevya-app',
+      projectId: effectiveProjectId,
     });
   } else {
     adminApp = initializeApp({
       credential,
+      projectId: effectiveProjectId,
     });
   }
 } else {
@@ -29,3 +37,4 @@ if (!getApps().length) {
 }
 
 export const adminAuth: Auth = getAuth(adminApp);
+
