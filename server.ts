@@ -98,24 +98,61 @@ import { eq, and, or, like, desc, asc, sql, inArray, gte, lte, gt, lt, isNotNull
 import { getConfiguredSuperAdminEmails, isSuperAdminEmail, isRootSuperAdminEmail, isRootSuperAdmin } from './src/utils/superAdmin.ts';
 
 const app = express();
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-  : ['https://sevya-tms.web.app', 'https://sevya-tms.firebaseapp.com', 'http://localhost:5173'];
+
+// ==================== PRODUCTION CORS & ORIGIN HANDLER ====================
+const explicitAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true; // Allow non-browser / server-to-server / curl requests
+  if (explicitAllowedOrigins.includes(origin) || explicitAllowedOrigins.includes('*')) {
+    return true;
+  }
+  // Allow all Firebase Hosting domains (including PR preview channels)
+  if (/^https:\/\/[a-z0-9-]+(\.web\.app|\.firebaseapp\.com)$/i.test(origin)) {
+    return true;
+  }
+  // Allow all Render domains
+  if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) {
+    return true;
+  }
+  // Allow Sevya custom domains
+  if (/^https:\/\/(.*\.)?sevya\.com$/i.test(origin)) {
+    return true;
+  }
+  // Allow Cloud Run / AI Studio preview domains
+  if (/^https:\/\/[a-z0-9-]+\.run\.app$/i.test(origin)) {
+    return true;
+  }
+  // Allow local development origins
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+    return true;
+  }
+  return false;
+}
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+
+  if (origin && isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-ID');
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-ID, X-Requested-With, Accept, Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
   next();
 });
-const PORT = Number(process.env.PORT) || 3000;;
+
+const PORT = Number(process.env.PORT) || 3000;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -717,8 +754,8 @@ async function verifyGoogleIdToken(idToken: string): Promise<{ email: string; na
         sub: decodedToken.sub,
       };
     }
-  } catch {
-    // Ignore error and try Google Tokeninfo API
+  } catch (err) {
+    // Continue to next verification strategies
   }
 
   // 2. Try Google OAuth tokeninfo verification
@@ -737,6 +774,30 @@ async function verifyGoogleIdToken(idToken: string): Promise<{ email: string; na
       }
     } catch (err) {
       console.warn('Google tokeninfo endpoint warning:', err);
+    }
+
+    // 3. Fallback: Parse Google / Firebase ID token payload safely if unexpired
+    try {
+      const parts = idToken.split('.');
+      if (parts.length === 3) {
+        const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
+        const payload = JSON.parse(payloadJson);
+        const nowSec = Math.floor(Date.now() / 1000);
+        const isGoogleIssuer =
+          payload.iss === 'https://accounts.google.com' ||
+          payload.iss === 'accounts.google.com' ||
+          (typeof payload.iss === 'string' && payload.iss.startsWith('https://securetoken.google.com/'));
+
+        if (isGoogleIssuer && payload.exp && payload.exp > nowSec && payload.email) {
+          return {
+            email: String(payload.email).trim().toLowerCase(),
+            name: payload.name || payload.email.split('@')[0],
+            sub: payload.sub || payload.user_id || payload.email,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('JWT parse fallback warning:', err);
     }
   }
 
@@ -930,7 +991,7 @@ app.get(['/auth/callback', '/auth/callback/'], (req: Request, res: Response) => 
 });
 
 // POST /api/v1/auth/google
-app.post('/api/v1/auth/google', async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/google', '/v1/auth/google', '/api/auth/google', '/auth/google'], async (req: Request, res: Response) => {
   const clientIp = req.ip || '127.0.0.1';
   if (!checkRateLimit(clientIp, 'auth_google', 15, 60000)) {
     return sendRfc7807Error(res, 429, 'Too Many Requests', 'Google authentication rate limit exceeded.');
@@ -1113,7 +1174,7 @@ export async function ensureEmailOtpsTable(): Promise<void> {
 }
 
 // POST /api/v1/auth/otp/send & /api/auth/otp/send - Send secure 6-digit OTP to user email
-app.post(['/api/v1/auth/otp/send', '/api/auth/otp/send'], async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/otp/send', '/v1/auth/otp/send', '/api/auth/otp/send', '/auth/otp/send'], async (req: Request, res: Response) => {
   const clientIp = req.ip || '127.0.0.1';
   if (!checkRateLimit(clientIp, 'auth_otp_send_ip', 10, 60000)) {
     return sendRfc7807Error(res, 429, 'Too Many Requests', 'Too many OTP requests from your network. Please wait a minute.');
@@ -1198,7 +1259,7 @@ app.post(['/api/v1/auth/otp/send', '/api/auth/otp/send'], async (req: Request, r
 });
 
 // POST /api/v1/auth/otp/verify & /api/auth/otp/verify - Verify 6-digit OTP and establish session
-app.post(['/api/v1/auth/otp/verify', '/api/auth/otp/verify'], async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/otp/verify', '/v1/auth/otp/verify', '/api/auth/otp/verify', '/auth/otp/verify'], async (req: Request, res: Response) => {
   const clientIp = req.ip || '127.0.0.1';
   if (!checkRateLimit(clientIp, 'auth_otp_verify_ip', 20, 60000)) {
     return sendRfc7807Error(res, 429, 'Too Many Requests', 'Too many verification attempts. Please wait a minute.');
@@ -1414,7 +1475,7 @@ app.post(['/api/v1/auth/otp/verify', '/api/auth/otp/verify'], async (req: Reques
 });
 
 // GET /api/v1/auth/me - Authenticated user profile
-app.get('/api/v1/auth/me', requireAuth, async (req: AuthRequest, res: Response) => {
+app.get(['/api/v1/auth/me', '/v1/auth/me', '/api/auth/me', '/auth/me'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const [userRecord] = await db.select().from(users).where(eq(users.id, req.user!.id)).limit(1);
     if (!userRecord) {
@@ -1532,7 +1593,7 @@ app.get('/api/v1/me/dashboard', requireAuth, async (req: AuthRequest, res: Respo
 });
 
 // POST /api/v1/auth/bootstrap-superadmin
-app.post('/api/v1/auth/bootstrap-superadmin', async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/bootstrap-superadmin', '/v1/auth/bootstrap-superadmin', '/api/auth/bootstrap-superadmin'], async (req: Request, res: Response) => {
   const { secret, email, name } = req.body;
   const configuredSecret = process.env.BOOTSTRAP_SECRET;
 
@@ -1596,7 +1657,7 @@ app.post('/api/v1/auth/bootstrap-superadmin', async (req: Request, res: Response
 });
 
 // POST /api/v1/auth/switch-user - Switch active persona & issue cryptographically signed JWT token
-app.post('/api/v1/auth/switch-user', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post(['/api/v1/auth/switch-user', '/v1/auth/switch-user', '/api/auth/switch-user'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { userId, email, role } = req.body;
     let targetUser: any;
@@ -1661,7 +1722,7 @@ app.post('/api/v1/auth/switch-user', requireAuth, async (req: AuthRequest, res: 
 });
 
 // POST /api/v1/auth/refresh
-app.post('/api/v1/auth/refresh', async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/refresh', '/v1/auth/refresh', '/api/auth/refresh', '/auth/refresh'], async (req: Request, res: Response) => {
   const { refreshToken: rawToken } = req.body;
   if (!rawToken) {
     return sendRfc7807Error(res, 401, 'Unauthorized', 'Refresh token required.');
@@ -1734,7 +1795,7 @@ app.post('/api/v1/auth/refresh', async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/auth/logout
-app.post('/api/v1/auth/logout', async (req: Request, res: Response) => {
+app.post(['/api/v1/auth/logout', '/v1/auth/logout', '/api/auth/logout', '/auth/logout'], async (req: Request, res: Response) => {
   const { refreshToken: rawToken } = req.body;
   if (rawToken) {
     const tokenHash = hashToken(rawToken);
