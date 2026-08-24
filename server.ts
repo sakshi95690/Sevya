@@ -127,43 +127,6 @@ const upload = multer({
 app.use(express.json({ limit: '15mb' }));
 // ==================== PRODUCTION CORS ====================
 
-const allowedOrigins = new Set([
-  'https://sevya-tms.web.app',
-  'https://sevya-tms.firebaseapp.com',
-  'http://localhost:5173',
-  'http://localhost:3000',
-]);
-
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin;
-
-  if (origin && allowedOrigins.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-    res.setHeader(
-      'Access-Control-Allow-Methods',
-      'GET,POST,PUT,PATCH,DELETE,OPTIONS'
-    );
-
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Correlation-ID'
-    );
-
-    res.setHeader(
-      'Access-Control-Expose-Headers',
-      'Authorization, X-Correlation-ID, Content-Type'
-    );
-  }
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-
-  next();
-});
 
 // Early PWA Interceptor Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
