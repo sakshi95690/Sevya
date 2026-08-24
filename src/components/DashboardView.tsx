@@ -6,7 +6,6 @@ import {
   User,
   DashboardStats,
   TempleInfo,
-  Announcement,
   Meeting,
   Notification
 } from '../types';
@@ -93,7 +92,6 @@ interface DashboardViewProps {
   users: User[];
   currentUser: User;
   temple: TempleInfo;
-  announcements?: Announcement[];
   meetings?: Meeting[];
   notifications?: Notification[];
   onOpenProofModal: (task: Task) => void;
@@ -108,23 +106,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   users = [],
   currentUser,
   temple,
-  announcements = [],
   meetings = [],
   notifications = [],
   onOpenProofModal,
   onNavigateTab,
 }) => {
-  const [fetchedAnnouncements, setFetchedAnnouncements] = useState<Announcement[]>(announcements);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
-    api
-      .getAnnouncements()
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) setFetchedAnnouncements(data);
-      })
-      .catch(() => {});
 
     if (currentUser.role === 'super_admin' || currentUser.role === 'temple_admin') {
       api
@@ -183,8 +173,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
     return m.organizerId === currentUser.id || m.participants?.some((p) => p.userId === currentUser.id || p.id === currentUser.id);
   });
-
-  const activeAnnouncementsList = (fetchedAnnouncements.length > 0 ? fetchedAnnouncements : announcements).slice(0, 4);
 
   // Aarti schedule for quick reference
   const dailyDarshanSchedule = [
@@ -407,32 +395,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 )}
               </div>
             </div>
-
-            {/* Temple Announcements */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4 transition-colors">
-              <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Announcements & Notices
-                </h3>
-                <button onClick={() => onNavigateTab('announcements')} className="text-amber-600 dark:text-amber-400 font-bold text-xs hover:underline cursor-pointer">
-                  All →
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {activeAnnouncementsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 py-3 text-center">No active announcements.</p>
-                ) : (
-                  activeAnnouncementsList.map((ann) => (
-                    <div key={ann.id} className="p-3 bg-amber-50/40 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-800/60 space-y-1 text-xs">
-                      <span className="font-bold text-slate-900 dark:text-slate-100 block">{ann.title}</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2">{ann.content}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -642,32 +604,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 })}
               </div>
             </div>
-
-            {/* Announcements */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4 transition-colors">
-              <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Announcements
-                </h3>
-                <button onClick={() => onNavigateTab('announcements')} className="text-amber-600 dark:text-amber-400 font-bold text-xs hover:underline cursor-pointer">
-                  All →
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {activeAnnouncementsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 py-3 text-center">No active announcements.</p>
-                ) : (
-                  activeAnnouncementsList.map((ann) => (
-                    <div key={ann.id} className="p-3 bg-amber-50/40 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-800/60 space-y-1 text-xs">
-                      <span className="font-bold text-slate-900 dark:text-slate-100 block">{ann.title}</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2">{ann.content}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -872,32 +808,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
                         {usr.accountStatus || 'Active'}
                       </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Announcements */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4 transition-colors">
-              <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Announcements
-                </h3>
-                <button onClick={() => onNavigateTab('announcements')} className="text-amber-600 dark:text-amber-400 font-bold text-xs hover:underline cursor-pointer">
-                  All →
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {activeAnnouncementsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 py-3 text-center">No active announcements.</p>
-                ) : (
-                  activeAnnouncementsList.map((ann) => (
-                    <div key={ann.id} className="p-3 bg-amber-50/40 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-800/60 space-y-1 text-xs">
-                      <span className="font-bold text-slate-900 dark:text-slate-100 block">{ann.title}</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2">{ann.content}</p>
                     </div>
                   ))
                 )}
