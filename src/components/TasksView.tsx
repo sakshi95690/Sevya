@@ -558,7 +558,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                                 className="font-bold text-amber-800 hover:text-amber-600 transition-colors flex items-center gap-1.5"
                               >
                                 <img
-                                  src={owner.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                                  src={owner.avatarUrl || '/images/default-avatar.png'}
                                   alt=""
                                   className="w-4 h-4 rounded-full object-cover border border-amber-300 shrink-0"
                                 />
@@ -821,7 +821,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                             className="flex items-center gap-1.5 text-slate-800 hover:text-amber-600 font-bold text-xs truncate"
                           >
                             <img
-                              src={owner.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                              src={owner.avatarUrl || '/images/default-avatar.png'}
                               alt=""
                               className="w-4 h-4 rounded-full object-cover border border-amber-300 shrink-0"
                             />
