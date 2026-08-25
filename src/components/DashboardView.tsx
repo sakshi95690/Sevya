@@ -356,7 +356,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Audit Logs & Announcements */}
+          {/* Right Column: Audit Logs */}
           <div className="space-y-6">
             {/* System Audit Stream */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4 transition-colors">
@@ -572,7 +572,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Department Progress & Announcements */}
+          {/* Right Column: Department Progress */}
           <div className="space-y-6">
             {/* Department Wing Progress */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4 transition-colors">
