@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePWA } from '../context/PWAContext';
 import { AuthModal } from './AuthModal';
+import { AnnouncementFormModal } from './AnnouncementFormModal';
+import { AnnouncementDetailsModal } from './AnnouncementDetailsModal';
 import { SevyaLogo } from './SevyaLogo';
 import {
   Bell,
@@ -25,14 +27,12 @@ import {
   Info,
   CheckCircle2,
   X,
-  Send,
   User as UserIcon,
   Sun,
   Moon,
   Download,
   WifiOff,
 } from 'lucide-react';
-
 
 interface HeaderProps {
   temple: TempleInfo;
@@ -79,16 +79,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showAnnounceMenu, setShowAnnounceMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  // New Announcement Form State
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
-  const [newCategory, setNewCategory] = useState('General');
-  const [newPriority, setNewPriority] = useState<'urgent' | 'high' | 'normal' | 'low'>('normal');
-  const [newTargetAudience, setNewTargetAudience] = useState<'all' | 'leaders' | 'coordinators' | 'members'>('all');
-  const [newIsPinned, setNewIsPinned] = useState(false);
-  const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const announceRef = useRef<HTMLDivElement>(null);
@@ -98,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadAnnouncementsCount = (announcements || []).filter((a) => !a.isRead).length;
 
   const canAssignTask = ['super_admin', 'temple_admin', 'department_head', 'coordinator'].includes(activeUser?.role || '');
-  const canCreateAnnouncement = ['super_admin', 'temple_admin', 'department_head'].includes(activeUser?.role || '');
+  const canCreateAnnouncement = ['super_admin', 'temple_admin', 'department_head', 'coordinator'].includes(activeUser?.role || '');
 
   // Close menus on outside click or Escape key
   useEffect(() => {
@@ -124,31 +117,19 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-  const handleCreateAnnouncementSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim()) return;
+  const handleCreateAnnouncementSubmit = async (data: Partial<Announcement>) => {
+    if (onCreateAnnouncement) {
+      await onCreateAnnouncement(data);
+    }
+    setShowCreateModal(false);
+  };
 
-    try {
-      setIsSubmittingAnnouncement(true);
-      if (onCreateAnnouncement) {
-        await onCreateAnnouncement({
-          title: newTitle.trim(),
-          content: newContent.trim(),
-          category: newCategory,
-          priority: newPriority,
-          targetAudience: newTargetAudience,
-          pinned: newIsPinned,
-          published: true,
-          active: true,
-        });
-      }
-      setNewTitle('');
-      setNewContent('');
-      setShowCreateModal(false);
-    } catch (err) {
-      console.error('Failed to create announcement:', err);
-    } finally {
-      setIsSubmittingAnnouncement(false);
+  const handleAnnouncementClick = (item: Announcement) => {
+    setShowAnnounceMenu(false);
+    setSelectedAnnouncement(item);
+    setShowDetailsModal(true);
+    if (!item.isRead && onMarkAnnouncementRead) {
+      onMarkAnnouncementRead(item.id);
     }
   };
 
@@ -252,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
                   : 'border-slate-200 dark:border-slate-700 hover:bg-amber-50/70 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
               }`}
-              title="Temple Announcements & Bulletins"
+              title="Announcements"
             >
               <Megaphone className={`w-4 h-4 ${showAnnounceMenu ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
               {unreadAnnouncementsCount > 0 && (
@@ -270,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="flex items-center gap-2">
                     <Megaphone className="w-4 h-4 text-amber-300" />
                     <div>
-                      <h3 className="text-xs font-black tracking-tight">Temple Announcements</h3>
+                      <h3 className="text-xs font-black tracking-tight">Announcements</h3>
                       <p className="text-[10px] text-amber-200/80 font-medium">Role: {activeUser?.role?.replace('_', ' ')}</p>
                     </div>
                   </div>
@@ -305,8 +286,8 @@ export const Header: React.FC<HeaderProps> = ({
                   {announcements.length === 0 ? (
                     <div className="p-8 text-center space-y-2">
                       <Megaphone className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
-                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No active announcements</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500">All announcements for your role have been read.</p>
+                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No announcements yet</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">There are no active announcements posted for your role at this time.</p>
                     </div>
                   ) : (
                     announcements.map((item) => {
@@ -316,7 +297,8 @@ export const Header: React.FC<HeaderProps> = ({
                       return (
                         <div
                           key={item.id}
-                          className={`p-3.5 transition-colors text-left space-y-1.5 ${
+                          onClick={() => handleAnnouncementClick(item)}
+                          className={`p-3.5 transition-colors text-left space-y-1.5 cursor-pointer ${
                             !item.isRead ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/40' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                           }`}
                         >
@@ -340,7 +322,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                             {!item.isRead && onMarkAnnouncementRead && (
                               <button
-                                onClick={() => onMarkAnnouncementRead(item.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onMarkAnnouncementRead(item.id);
+                                }}
                                 className="text-[10px] text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 font-bold shrink-0 cursor-pointer p-0.5"
                                 title="Mark as read"
                               >
@@ -356,7 +341,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                           <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 pt-1">
                             <span>
-                              {item.authorName ? `By ${item.authorName}` : 'Temple Admin'} • {item.startDate || new Date(item.createdAt || '').toLocaleDateString()}
+                              {item.authorName ? `By ${item.authorName}` : 'Administration'} • {new Date(item.createdAt || Date.now()).toLocaleDateString()}
                             </span>
                             {item.targetAudience && (
                               <span className="font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[9px]">
@@ -374,7 +359,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {onOpenAnnouncements && (
                   <div className="p-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center flex items-center justify-between px-4">
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                      Showing {announcements.length} role-filtered notices
+                      Showing {announcements.length} {announcements.length === 1 ? 'notice' : 'notices'}
                     </span>
                     <button
                       onClick={() => {
@@ -501,118 +486,31 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Post Announcement Modal for Admins / Dept Heads */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[92vh] flex flex-col">
-            <div className="bg-slate-900 dark:bg-slate-950 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-amber-400" />
-                <h3 className="font-bold text-sm">Post Temple Announcement</h3>
-              </div>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Rich Announcement Form Modal */}
+      <AnnouncementFormModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateAnnouncementSubmit}
+        currentUser={activeUser}
+      />
 
-            <form onSubmit={handleCreateAnnouncementSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                  Announcement Title
-                </label>
-                <input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Special Darshan Timing for Janmashtami..."
-                  required
-                  className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                  Message Content
-                </label>
-                <textarea
-                  rows={3}
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Provide complete details, holy schedule, instructions, or meeting links..."
-                  required
-                  className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium text-slate-800 dark:text-slate-200"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                    Target Audience (RBAC)
-                  </label>
-                  <select
-                    value={newTargetAudience}
-                    onChange={(e) => setNewTargetAudience(e.target.value as any)}
-                    className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-900 dark:text-slate-100"
-                  >
-                    <option value="all">Everyone (All Members & Staff)</option>
-                    <option value="leaders">Leadership (Admins & Department Heads)</option>
-                    <option value="coordinators">Coordinators</option>
-                    <option value="members">Members Only</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                    Priority Level
-                  </label>
-                  <select
-                    value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value as any)}
-                    className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-900 dark:text-slate-100"
-                  >
-                    <option value="normal">Normal Notice</option>
-                    <option value="high">High Priority</option>
-                    <option value="urgent">Urgent Alert</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="pinCheck"
-                  checked={newIsPinned}
-                  onChange={(e) => setNewIsPinned(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-600 focus:ring-amber-500"
-                />
-                <label htmlFor="pinCheck" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1">
-                  <Pin className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Pin this announcement to top of header
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingAnnouncement}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Send className="w-3.5 h-3.5" /> Publish Announcement
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Rich Announcement Details Modal */}
+      <AnnouncementDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedAnnouncement(null);
+        }}
+        announcement={selectedAnnouncement}
+        currentUser={activeUser}
+        onToggleRead={
+          onMarkAnnouncementRead
+            ? async (id) => {
+                onMarkAnnouncementRead(id);
+              }
+            : undefined
+        }
+      />
 
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
