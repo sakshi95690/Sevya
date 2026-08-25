@@ -5,12 +5,10 @@ import {
   Briefcase,
   Landmark,
   Zap,
-  Smartphone,
 } from 'lucide-react';
 import { DesignationsManager } from './DesignationsManager';
 import { DepartmentsManager } from './DepartmentsManager';
 import { IntegrationsManager } from './IntegrationsManager';
-import { PWASettingsManager } from './PWASettingsManager';
 import { getRoleRank } from '../utils/roleHierarchy';
 
 interface SettingsViewProps {
@@ -58,8 +56,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return parts[1];
       }
       const saved = localStorage.getItem('sevya_settings_subtab');
-      if (saved && (saved === 'departments' || saved === 'designations' || saved === 'integrations' || saved === 'pwa')) {
-        if (!isAdmin && saved !== 'integrations' && saved !== 'pwa') return 'integrations';
+      if (saved && (saved === 'departments' || saved === 'designations' || saved === 'integrations')) {
+        if (!isAdmin && saved !== 'integrations') return 'integrations';
         return saved;
       }
     } catch {}
@@ -84,12 +82,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Settings className="w-5 h-5 text-amber-600" />
-              {isAdmin ? 'Temple Settings & Configurations' : 'Integrations & Offline Storage'}
+              {isAdmin ? 'Temple Settings & Configurations' : 'Integrations & Channels'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {isAdmin
-                ? 'Manage organizational departments, custom designations, channel integrations, and offline storage'
-                : 'Configure personal connected channels, calendar syncing, and offline cache storage'}
+                ? 'Manage organizational departments, custom designations, and channel integrations'
+                : 'Configure personal connected channels and calendar syncing'}
             </p>
           </div>
           <div className="text-xs font-semibold px-3 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-full w-fit">
@@ -132,16 +130,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               >
                 <Zap className="w-4 h-4 text-amber-600" /> Integrations & Channels
               </button>
-              <button
-                onClick={() => setActiveTab('pwa')}
-                className={`py-2 px-4 font-bold text-xs rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                  activeTab === 'pwa'
-                    ? 'border-amber-600 text-amber-900 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/30'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <Smartphone className="w-4 h-4 text-amber-600" /> Offline & Storage
-              </button>
             </>
           ) : (
             /* ================= MEMBER & NON-ADMIN TABS ================= */
@@ -156,16 +144,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               >
                 <Zap className="w-4 h-4 text-amber-600" /> Integrations & Channels
               </button>
-              <button
-                onClick={() => setActiveTab('pwa')}
-                className={`py-2 px-4 font-bold text-xs rounded-t-xl transition-all border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                  activeTab === 'pwa'
-                    ? 'border-amber-600 text-amber-900 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/30'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <Smartphone className="w-4 h-4 text-amber-600" /> Offline & Storage
-              </button>
             </>
           )}
         </div>
@@ -178,12 +156,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <IntegrationsManager currentUser={currentUser} />
       )}
 
-      {/* 2. PWA & DEVICE APP SETTINGS */}
-      {activeTab === 'pwa' && (
-        <PWASettingsManager />
-      )}
-
-      {/* 3. ADMIN ONLY TABS (Departments, Designations) */}
+      {/* 2. ADMIN ONLY TABS (Departments, Designations) */}
       {isAdmin && activeTab === 'departments' && (
         <DepartmentsManager
           departments={departments}
