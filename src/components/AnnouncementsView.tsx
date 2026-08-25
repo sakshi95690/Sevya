@@ -154,10 +154,10 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-            Temple Announcements & Notices
+            Announcements
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Single official bulletin board for devotional updates, festival schedules, and volunteer notices
+            Official announcements, devotional updates, and schedule notices
           </p>
         </div>
 
@@ -220,7 +220,11 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
               <Megaphone className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">No announcements found</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                {searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all'
+                  ? 'No announcements match your filter'
+                  : 'No announcements yet'}
+              </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                 {searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all'
                   ? 'Try adjusting your search query or filter settings to view other announcements.'
