@@ -467,7 +467,7 @@ export const ProjectWorkspaceModal: React.FC<ProjectWorkspaceModalProps> = ({
                             className="flex items-center gap-2 text-left hover:text-amber-600 transition-colors cursor-pointer"
                           >
                             <img
-                              src={projectData.leadUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                              src={projectData.leadUser.avatarUrl || '/images/default-avatar.png'}
                               alt=""
                               className="w-7 h-7 rounded-full object-cover border border-amber-200"
                             />
@@ -602,7 +602,7 @@ export const ProjectWorkspaceModal: React.FC<ProjectWorkspaceModalProps> = ({
                                       className="cursor-pointer"
                                     >
                                       <img
-                                        src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                                        src={u.avatarUrl || '/images/default-avatar.png'}
                                         alt=""
                                         className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-2xs hover:scale-110 transition-transform"
                                       />
@@ -728,7 +728,7 @@ export const ProjectWorkspaceModal: React.FC<ProjectWorkspaceModalProps> = ({
                             className="flex items-center gap-3 text-left min-w-0 flex-1 hover:text-amber-600 transition-colors cursor-pointer"
                           >
                             <img
-                              src={m.user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                              src={m.user?.avatarUrl || '/images/default-avatar.png'}
                               alt=""
                               className="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-2xs shrink-0"
                             />
