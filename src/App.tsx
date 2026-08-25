@@ -1155,18 +1155,6 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'announcements' && (
-            <AnnouncementsView
-              currentUser={currentUser}
-              announcements={announcements}
-              onRefresh={() => {
-                api.getAnnouncements().then((data) => {
-                  if (Array.isArray(data)) setAnnouncements(data);
-                });
-              }}
-            />
-          )}
-
           {activeTab === 'projects' && (
             <ProjectsView
               projects={projects}
