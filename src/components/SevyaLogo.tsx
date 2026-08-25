@@ -12,10 +12,10 @@ interface SevyaLogoProps {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR SEVYA BRANDING:
- * References the fixed logo image located in the /public directory.
- * When a new image is placed in /public/logo.png (or /logo.jpeg), the entire app updates automatically.
+ * References the transparent vector logo located in the /public directory.
+ * Renders cleanly with 100% transparency (no white box, border, or artificial background).
  */
-export const SEVYA_LOGO_SRC = '/logo.png';
+export const SEVYA_LOGO_SRC = '/logo.svg';
 
 export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   size = 'md',
@@ -53,17 +53,17 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   const colorClass = textColor || defaultTextColor;
 
   const handleImageError = () => {
-    // Fallback if user places .jpeg or .svg instead of .png
-    if (imgSrc === '/logo.png') {
+    // Fallback between vector SVG and high-res PNG
+    if (imgSrc === '/logo.svg') {
+      setImgSrc('/logo.png');
+    } else if (imgSrc === '/logo.png') {
       setImgSrc('/logo.jpeg');
-    } else if (imgSrc === '/logo.jpeg') {
-      setImgSrc('/logo.svg');
     }
   };
 
   const iconElement = (
     <div
-      className={`${iconSizes[size] || 'w-9 h-9'} rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs transition-all duration-200`}
+      className={`${iconSizes[size] || 'w-9 h-9'} flex items-center justify-center shrink-0 transition-transform duration-200`}
     >
       <img
         src={imgSrc}
@@ -72,7 +72,7 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
         loading="eager"
         decoding="async"
         referrerPolicy="no-referrer"
-        className="w-full h-full object-contain rounded-lg pointer-events-none select-none"
+        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-xs"
       />
     </div>
   );
