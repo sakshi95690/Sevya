@@ -18,12 +18,12 @@ export const INITIAL_TEMPLE: TempleInfo = {
   city: 'Vrindavan Dham',
   state: 'Uttar Pradesh',
   pincode: '281121',
-  contactPhone: '+91 98765 43210',
-  contactEmail: 'seva@sevya.org',
+  contactPhone: '+91 9798470540',
+  contactEmail: 'sevyagiridharidas@gmail.com',
   trusteesCount: 12,
   registeredNumber: 'TRUST/UP/VRN/2020/884',
-  logo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
-  banner: 'https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=1200&auto=format&fit=crop&q=80',
+  logo: '/logo.svg',
+  banner: '/images/banner.png',
 };
 
 export const INITIAL_DEPARTMENTS: Department[] = [];
