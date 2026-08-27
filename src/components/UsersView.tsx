@@ -33,6 +33,7 @@ import {
   Check,
 } from 'lucide-react';
 import { RowContextMenu, ContextMenuAction } from './RowContextMenu';
+import { UserHierarchyTree } from './UserHierarchyTree';
 import {
   getRoleDisplayName,
   normalizeRole,
@@ -132,7 +133,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
       const saved = localStorage.getItem('sevya_users_view_mode');
       if (saved === 'grid' || saved === 'hierarchy') return saved;
     } catch {}
-    return 'grid';
+    return 'hierarchy';
   });
 
   const setViewMode = (mode: 'grid' | 'hierarchy') => {
@@ -159,6 +160,21 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const [parentId, setParentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parentCandidates, setParentCandidates] = useState<User[]>([]);
+
+  // Quick subordinate addition handler from hierarchy tree node
+  const handleAddSubordinateFromNode = (parentUser: User, suggestedRole?: UserRole) => {
+    setParentId(parentUser.id);
+    const validRoles = getAllowedAssignableRoles(currentUser.role);
+    if (suggestedRole && validRoles.includes(suggestedRole)) {
+      setRole(suggestedRole);
+    } else if (validRoles.length > 0) {
+      setRole(validRoles[0]);
+    }
+    if (parentUser.departmentId) {
+      setDepartmentId(parentUser.departmentId);
+    }
+    setShowModal(true);
+  };
 
   // Editing and Deleting user states
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -403,6 +419,9 @@ export const UsersView: React.FC<UsersViewProps> = ({
   }, [editingUser]);
 
   const filteredUsers = visibleUsers.filter((u) => {
+    // Exclude logged-in user's own profile from the manageable subordinates list
+    if (u.id === currentUser.id) return false;
+
     // 1. Search filter (name, email, phone, designation, manager name, role display name)
     const q = searchTerm.trim().toLowerCase();
     const matchesSearch =
@@ -606,21 +625,53 @@ export const UsersView: React.FC<UsersViewProps> = ({
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                 Staff & Member Directory
               </h1>
               <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
                 RBAC
               </span>
+              <span className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Shield className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                <span>Scope: <strong className="font-bold">{currentUser.name}</strong> ({getRoleDisplayName(currentUser.role)})</span>
+              </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Manage organizational hierarchy, supervisory chains, and role assignments
+              Manage organizational hierarchy, supervisory reporting lines, and role assignments
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {/* View Mode Toggle: Hierarchy Tree vs Directory List */}
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center border border-slate-200 dark:border-slate-700 shadow-2xs">
+            <button
+              onClick={() => setViewMode('hierarchy')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'hierarchy'
+                  ? 'bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Interactive 5-tier expandable tree view"
+            >
+              <GitFork className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Tree Hierarchy</span>
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Flat directory cards list"
+            >
+              <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Directory List</span>
+            </button>
+          </div>
+
           {canManageUsers && (
             <button
               onClick={() => {
@@ -689,7 +740,145 @@ export const UsersView: React.FC<UsersViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: User Directory */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Multi-Level Hierarchical Filter & Search Module */}
+          {viewMode === 'hierarchy' ? (
+            <>
+              {/* Quick Search & Tier Filter Bar */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search tree by name, email, phone, role, designation, or department..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 focus:bg-white text-slate-800 transition-all font-medium"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-slate-700 font-medium"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="ACTIVE">Active Personnel</option>
+                      <option value="INVITED">Invited</option>
+                      <option value="SUSPENDED">Suspended</option>
+                      <option value="DISABLED">Disabled</option>
+                    </select>
+
+                    {(searchTerm || selectedRoleTier !== 'all' || statusFilter !== 'all') && (
+                      <button
+                        onClick={resetHierarchyFilters}
+                        className="px-3 py-2 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Role Tier Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
+                    <Layers className="w-3.5 h-3.5 text-amber-600" /> Filter Tier:
+                  </span>
+                  <button
+                    onClick={() => setSelectedRoleTier('all')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'all'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    All ({visibleUsers.filter((u) => u.id !== currentUser.id).length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoleTier('super_admin')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'super_admin'
+                        ? 'bg-purple-700 text-white shadow-xs'
+                        : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+                    }`}
+                  >
+                    Tier 1: Super Admin ({roleDistribution.super_admin})
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoleTier('temple_admin')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'temple_admin'
+                        ? 'bg-blue-700 text-white shadow-xs'
+                        : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+                    }`}
+                  >
+                    Tier 2: Temple Admin ({roleDistribution.temple_admin})
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoleTier('department_head')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'department_head'
+                        ? 'bg-amber-700 text-white shadow-xs'
+                        : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                    }`}
+                  >
+                    Tier 3: Dept Head ({roleDistribution.department_head})
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoleTier('coordinator')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'coordinator'
+                        ? 'bg-emerald-700 text-white shadow-xs'
+                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                    }`}
+                  >
+                    Tier 4: Coordinator ({roleDistribution.coordinator})
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoleTier('member')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedRoleTier === 'member'
+                        ? 'bg-slate-800 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    Tier 5: Member ({roleDistribution.member})
+                  </button>
+                </div>
+              </div>
+
+              {/* Hierarchical Expandable Tree */}
+              <UserHierarchyTree
+                users={visibleUsers}
+                departments={departments}
+                designations={designations}
+                currentUser={currentUser}
+                searchTerm={searchTerm}
+                selectedRoleTier={selectedRoleTier}
+                statusFilter={statusFilter}
+                onEditUser={(usr) => setEditingUser(usr)}
+                onDeleteUser={(usr) => {
+                  setDeletingUser(usr);
+                  setDeleteConfirmationText('');
+                }}
+                onViewUserProfile={onViewUserProfile}
+                onAddSubordinate={handleAddSubordinateFromNode}
+              />
+            </>
+          ) : (
+            <>
+              {/* Multi-Level Hierarchical Filter & Search Module */}
           <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
             {/* Search Bar & Scope Quick Actions */}
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -1282,6 +1471,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
 
