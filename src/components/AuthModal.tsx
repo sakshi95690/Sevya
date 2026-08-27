@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { SevyaLogo } from './SevyaLogo';
 import {
   AlertCircle,
   X,
@@ -332,7 +333,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Step 1: 2 Independent Options [ Continue with Google ] OR [ Continue with Email OTP ] */}
           {authStep === 'select' && (
             <div className="space-y-4 text-center">
-              <div>
+              <div className="flex flex-col items-center">
+                <SevyaLogo size="lg" showText={false} className="mb-2.5" />
                 <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
                   Sign in to SEVYA
                 </h3>
