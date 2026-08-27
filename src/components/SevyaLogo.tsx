@@ -12,9 +12,10 @@ interface SevyaLogoProps {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR SEVYA BRANDING:
- * Directly renders /logo.jpeg from the public folder across the application.
+ * Uses /logo.png as the primary brand logo across the entire application
+ * (Header, Sidebar, Welcome screen, Modals, Taskbar, and Footers).
  */
-export const SEVYA_LOGO_SRC = '/logo.jpeg';
+export const SEVYA_LOGO_SRC = '/logo.png';
 
 export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   size = 'md',
@@ -55,10 +56,12 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
 
   const handleImageError = () => {
     // Fallback if needed
-    if (imgSrc === '/logo.jpeg') {
-      setImgSrc('/logo.jpg');
-    } else if (imgSrc === '/logo.jpg') {
-      setImgSrc('/logo.png');
+    if (imgSrc === '/logo.png') {
+      setImgSrc('/sevya-logo.png');
+    } else if (imgSrc === '/sevya-logo.png') {
+      setImgSrc('/logo.svg');
+    } else if (imgSrc === '/logo.svg') {
+      setImgSrc('/icon-512.png');
     }
   };
 
