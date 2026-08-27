@@ -188,11 +188,11 @@ export const VolunteerManagementModal: React.FC<VolunteerManagementModalProps> =
                           <td className="py-3.5 px-4 font-semibold text-slate-900">
                             <div className="flex items-center gap-2">
                               <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-xs">
-                                {vol.name.charAt(0).toUpperCase()}
+                                {(vol.name || 'V').charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <p className="font-bold text-slate-900">{vol.name}</p>
-                                <p className="text-[10px] text-slate-500 font-normal">ID: {vol.userId.substring(0, 8)}...</p>
+                                <p className="font-bold text-slate-900">{vol.name || 'Volunteer'}</p>
+                                <p className="text-[10px] text-slate-500 font-normal">ID: {(vol.userId || '').substring(0, 8)}...</p>
                               </div>
                             </div>
                           </td>
