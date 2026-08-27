@@ -15,6 +15,7 @@ export interface DecodedUser {
   role: string;
   templeId: string;
   departmentId?: string;
+  parentId?: string;
   accountStatus: string;
   googleSubject?: string;
 }
