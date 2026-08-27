@@ -1,4 +1,4 @@
-import { getAuthHeader } from './apiClient';
+import { request } from './apiClient';
 
 export interface WorkflowRule {
   id: string;
@@ -81,57 +81,40 @@ export interface NotificationPreference {
 }
 
 export const fetchWorkflows = async (): Promise<WorkflowRule[]> => {
-  const res = await fetch('/api/v1/workflows', { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch workflows');
-  return res.json();
+  return request<WorkflowRule[]>('/v1/workflows');
 };
 
 export const createWorkflow = async (data: Partial<WorkflowRule>): Promise<WorkflowRule> => {
-  const res = await fetch('/api/v1/workflows', {
+  return request<WorkflowRule>('/v1/workflows', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create workflow');
-  return res.json();
 };
 
 export const toggleWorkflow = async (id: string, active: boolean): Promise<WorkflowRule> => {
-  const res = await fetch(`/api/v1/workflows/${id}/toggle`, {
+  return request<WorkflowRule>(`/v1/workflows/${id}/toggle`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify({ active }),
   });
-  if (!res.ok) throw new Error('Failed to toggle workflow state');
-  return res.json();
 };
 
 export const fetchWorkflowExecutions = async (): Promise<WorkflowExecution[]> => {
-  const res = await fetch('/api/v1/workflows/executions', { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch workflow executions');
-  return res.json();
+  return request<WorkflowExecution[]>('/v1/workflows/executions');
 };
 
 export const fetchWorkflowHealth = async (): Promise<WorkflowHealth> => {
-  const res = await fetch('/api/v1/workflows/health', { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch workflow system health');
-  return res.json();
+  return request<WorkflowHealth>('/v1/workflows/health');
 };
 
 export const retryWorkflowJob = async (jobId: string): Promise<{ success: boolean }> => {
-  const res = await fetch(`/api/v1/workflows/jobs/${jobId}/retry`, {
+  return request<{ success: boolean }>(`/v1/workflows/jobs/${jobId}/retry`, {
     method: 'POST',
-    headers: getAuthHeader(),
   });
-  if (!res.ok) throw new Error('Failed to retry workflow job');
-  return res.json();
 };
 
 export const fetchApprovalRequests = async (status?: string): Promise<ApprovalRequest[]> => {
   const query = status ? `?status=${status}` : '';
-  const res = await fetch(`/api/v1/approvals${query}`, { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch approval requests');
-  return res.json();
+  return request<ApprovalRequest[]>(`/v1/approvals${query}`);
 };
 
 export const createApprovalRequestApi = async (data: {
@@ -145,22 +128,10 @@ export const createApprovalRequestApi = async (data: {
   approverUserId?: string;
   templeId?: string;
 }): Promise<ApprovalRequest> => {
-  const res = await fetch('/api/v1/approvals', {
+  return request<ApprovalRequest>('/v1/approvals', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(data),
   });
-  if (!res.ok) {
-    let errMsg = 'Failed to submit approval request';
-    try {
-      const errJson = await res.json();
-      errMsg = errJson.detail || errJson.message || errJson.error || errMsg;
-    } catch {
-      // ignore
-    }
-    throw new Error(errMsg);
-  }
-  return res.json();
 };
 
 export const processApprovalActionApi = async (
@@ -168,52 +139,30 @@ export const processApprovalActionApi = async (
   action: 'APPROVE' | 'REJECT',
   comment?: string
 ): Promise<ApprovalRequest> => {
-  const res = await fetch(`/api/v1/approvals/${requestId}/action`, {
+  return request<ApprovalRequest>(`/v1/approvals/${requestId}/action`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify({ action, comment }),
   });
-  if (!res.ok) {
-    let errMsg = 'Failed to process approval action';
-    try {
-      const errJson = await res.json();
-      errMsg = errJson.detail || errJson.message || errJson.error || errMsg;
-    } catch {
-      // ignore
-    }
-    throw new Error(errMsg);
-  }
-  return res.json();
 };
 
 export const fetchNotificationPreferences = async (): Promise<NotificationPreference[]> => {
-  const res = await fetch('/api/v1/notifications/preferences', { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch notification preferences');
-  return res.json();
+  return request<NotificationPreference[]>('/v1/notifications/preferences');
 };
 
 export const updateNotificationPreferences = async (preferences: NotificationPreference[]): Promise<{ success: boolean }> => {
-  const res = await fetch('/api/v1/notifications/preferences', {
+  return request<{ success: boolean }>('/v1/notifications/preferences', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify({ preferences }),
   });
-  if (!res.ok) throw new Error('Failed to update notification preferences');
-  return res.json();
 };
 
 export const registerPushSubscription = async (subscription: PushSubscription): Promise<{ success: boolean }> => {
-  const res = await fetch('/api/v1/notifications/push/subscribe', {
+  return request<{ success: boolean }>('/v1/notifications/push/subscribe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(subscription),
   });
-  if (!res.ok) throw new Error('Failed to register push subscription');
-  return res.json();
 };
 
 export const fetchVapidPublicKey = async (): Promise<{ publicKey: string }> => {
-  const res = await fetch('/api/v1/notifications/push/vapid-public-key', { headers: getAuthHeader() });
-  if (!res.ok) throw new Error('Failed to fetch VAPID public key');
-  return res.json();
+  return request<{ publicKey: string }>('/v1/notifications/push/vapid-public-key');
 };
