@@ -244,12 +244,12 @@ export const RoleOnboardingTour: React.FC<RoleOnboardingTourProps> = ({
             id: 'users',
             targetSelector: '[data-tour="nav-users"]',
             fallbackSelector: '[data-tour="nav-dashboard"]',
-            title: 'Devotee & Staff Directory',
+            title: 'Staff & Members',
             subtitle: 'User Management',
             description:
               'Manage temple staff, department heads, coordinators, and volunteer devotees. Assign custom designations and manage roles.',
             icon: <Users className="w-5 h-5 text-blue-600" />,
-            roleBadge: 'Directory',
+            roleBadge: 'Staff & Members',
             badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
             actionTip: 'Invite new volunteers and assign them to respective departments.',
           },
@@ -435,7 +435,7 @@ export const RoleOnboardingTour: React.FC<RoleOnboardingTourProps> = ({
             targetSelector: '[data-tour="nav-users"]',
             fallbackSelector: '[data-tour="nav-dashboard"]',
             title: 'Devotee Community & Volunteers',
-            subtitle: 'Volunteer Directory',
+            subtitle: 'Staff & Members',
             description:
               'Quickly look up volunteer contact information, WhatsApp numbers, and department affiliations to coordinate seva teams.',
             icon: <Users className="w-5 h-5 text-indigo-600" />,
