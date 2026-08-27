@@ -44,8 +44,8 @@ export async function sendWebPushNotification(
     const payloadString = JSON.stringify({
       title: payload.title,
       body: payload.body,
-      icon: payload.icon || '/logo.jpeg',
-      badge: payload.badge || '/logo.jpeg',
+      icon: payload.icon || '/logo.png',
+      badge: payload.badge || '/badge.png',
       data: {
         url: payload.url || '/dashboard',
         ...payload.data,
