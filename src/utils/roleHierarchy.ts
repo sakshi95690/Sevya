@@ -15,13 +15,18 @@ export const ROLE_RANKS: Record<string, number> = {
 
 /**
  * Subordinate Creation Matrix:
- * All parent roles can create/assign any subordinate role beneath them,
- * while maintaining the required parent chain:
- * Super Admin → Temple Admin → Department Head → Coordinator → Member
+ * Strict Role Creation & Assignment Hierarchy:
+ * Super Admin → Temple Admin → Department Head → Coordinator → Member/Sevak
+ * - Super Admin: can create/manage Temple Admins.
+ * - Temple Admin: can create/manage Department Heads.
+ * - Department Head: can create/manage Coordinators and Members according to department.
+ * - Coordinator: can create/manage Members/Sevaks.
+ * - Member: cannot create/assign users.
+ * A role must NEVER get options to create or assign its parent/sibling roles.
  */
 export const SUBORDINATE_CREATION_ROLES: Record<string, string[]> = {
-  super_admin: ['temple_admin', 'department_head', 'coordinator', 'member'],
-  temple_admin: ['department_head', 'coordinator', 'member'],
+  super_admin: ['temple_admin'],
+  temple_admin: ['department_head'],
   department_head: ['coordinator', 'member'],
   coordinator: ['member'],
   member: [],
@@ -98,15 +103,24 @@ export function getRequiredParentRole(targetRole?: string | null): UserRole | nu
 }
 
 /**
- * Validates if parentRole is the required immediate parent for targetRole.
+ * Validates if parentRole is an authorized parent for targetRole.
+ * - Temple Admin must report to Super Admin
+ * - Department Head must report to Temple Admin
+ * - Coordinator must report to Department Head
+ * - Member must report to Coordinator or Department Head
+ * - Super Admin is root (no parent required)
  */
 export function isParentRoleValid(targetRole?: string | null, parentRole?: string | null): boolean {
   if (!targetRole) return false;
   const targetNorm = normalizeRole(targetRole);
-  const expectedParent = REQUIRED_PARENT_ROLE[targetNorm];
-  if (!expectedParent) return true; // super_admin has no mandatory parent
+  if (targetNorm === 'super_admin') return true; // root governance
   if (!parentRole) return false;
-  return normalizeRole(parentRole) === expectedParent;
+  const parentNorm = normalizeRole(parentRole);
+  if (targetNorm === 'temple_admin') return parentNorm === 'super_admin';
+  if (targetNorm === 'department_head') return parentNorm === 'temple_admin';
+  if (targetNorm === 'coordinator') return parentNorm === 'department_head';
+  if (targetNorm === 'member') return parentNorm === 'coordinator' || parentNorm === 'department_head';
+  return false;
 }
 
 /**
@@ -145,12 +159,22 @@ export function canSeeUser(callerRole?: string, targetRole?: string, callerId?: 
 
 /**
  * Determines whether caller can manage (edit, delete, disable, change role of) target user.
+ * - Super Admin: can manage temple_admin, department_head, coordinator, member
+ * - Temple Admin: can manage department_head, coordinator, member
+ * - Department Head: can manage coordinator, member
+ * - Coordinator: can manage member
+ * - Member: cannot manage anyone
+ * Parent and sibling roles can NEVER be managed.
  */
 export function canManageUser(callerRole?: string, targetRole?: string): boolean {
   if (!callerRole || !targetRole) return false;
   const cRole = normalizeRole(callerRole);
-  if (cRole === 'super_admin') return true;
-  return getRoleRank(callerRole) > getRoleRank(targetRole);
+  const tRole = normalizeRole(targetRole);
+  if (cRole === 'super_admin') return tRole !== 'super_admin';
+  if (cRole === 'temple_admin') return tRole === 'department_head' || tRole === 'coordinator' || tRole === 'member';
+  if (cRole === 'department_head') return tRole === 'coordinator' || tRole === 'member';
+  if (cRole === 'coordinator') return tRole === 'member';
+  return false;
 }
 
 /**
