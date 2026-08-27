@@ -146,15 +146,69 @@ export function isImmediateSubordinate(callerRole?: string | null, targetRole?: 
 
 /**
  * Determines whether caller can see target user in lists, search, reports, and dropdowns.
+ * Strict Role Visibility Rules:
+ * - Super Admin: Can view all roles across the organization.
+ * - Temple Admin: Can view Temple Admins, Department Heads, Coordinators, and Members. Super Admin is NEVER visible.
+ * - Department Head: Can view self, Coordinators, and Members. Super Admin and Temple Admin are NEVER visible.
+ * - Coordinator: Can view self and Members. Super Admin, Temple Admin, and Department Head are NEVER visible.
+ * - Member: Can only view self.
  */
-export function canSeeUser(callerRole?: string, targetRole?: string, callerId?: string, targetId?: string): boolean {
+export function canSeeUser(
+  callerRole?: string,
+  targetRole?: string,
+  callerId?: string,
+  targetId?: string
+): boolean {
   if (!callerRole || !targetRole) return false;
   if (callerId && targetId && callerId === targetId) return true;
   const cRole = normalizeRole(callerRole);
+  const tRole = normalizeRole(targetRole);
+
   if (cRole === 'super_admin') return true;
-  const cRank = getRoleRank(callerRole);
-  const tRank = getRoleRank(targetRole);
-  return cRank >= tRank;
+
+  if (cRole === 'temple_admin') {
+    return tRole !== 'super_admin';
+  }
+
+  if (cRole === 'department_head') {
+    if (['super_admin', 'temple_admin', 'department_head'].includes(tRole)) {
+      return Boolean(callerId && targetId && callerId === targetId);
+    }
+    return tRole === 'coordinator' || tRole === 'member';
+  }
+
+  if (cRole === 'coordinator') {
+    if (['super_admin', 'temple_admin', 'department_head', 'coordinator'].includes(tRole)) {
+      return Boolean(callerId && targetId && callerId === targetId);
+    }
+    return tRole === 'member';
+  }
+
+  if (cRole === 'member') {
+    return Boolean(callerId && targetId && callerId === targetId);
+  }
+
+  return false;
+}
+
+/**
+ * Returns the list of organizational tiers visible to the caller.
+ */
+export function getAllowedTiers(callerRole?: string | null): UserRole[] {
+  const cRole = normalizeRole(callerRole || 'member');
+  if (cRole === 'super_admin') {
+    return ['super_admin', 'temple_admin', 'department_head', 'coordinator', 'member'];
+  }
+  if (cRole === 'temple_admin') {
+    return ['temple_admin', 'department_head', 'coordinator', 'member'];
+  }
+  if (cRole === 'department_head') {
+    return ['department_head', 'coordinator', 'member'];
+  }
+  if (cRole === 'coordinator') {
+    return ['coordinator', 'member'];
+  }
+  return ['member'];
 }
 
 /**
