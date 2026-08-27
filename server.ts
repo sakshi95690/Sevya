@@ -646,10 +646,24 @@ async function getUserPermittedApprovalIds(
       );
   }
 
+  // 4. Approval requests where metadataJson designates this user as parent
+  const allTenantRequests = await db
+    .select({ id: approvalRequests.id, metadataJson: approvalRequests.metadataJson })
+    .from(approvalRequests)
+    .where(eq(approvalRequests.templeId, tenantId));
+
+  const metadataAssignedIds = allTenantRequests
+    .filter((r) => {
+      const meta = (r.metadataJson as any) || {};
+      return meta.parentUserId === userId;
+    })
+    .map((r) => r.id);
+
   const allIds = new Set<string>([
     ...ownRequests.map((r) => r.id),
     ...stepRows.map((s) => s.approvalRequestId),
     ...childRequests.map((c) => c.id),
+    ...metadataAssignedIds,
   ]);
 
   return Array.from(allIds);
@@ -1839,17 +1853,14 @@ app.post(['/api/v1/auth/logout', '/v1/auth/logout', '/api/auth/logout', '/auth/l
 // USER PROVISIONING & USER MANAGEMENT
 
 // GET /api/v1/hierarchy/parents & /api/hierarchy/parents - Fetch eligible immediate parent candidates for a role
-app.get(['/api/v1/hierarchy/parents', '/api/hierarchy/parents'], requireAuth, async (req: AuthRequest, res: Response) => {
+app.get(['/api/v1/hierarchy/parents', '/v1/hierarchy/parents', '/api/hierarchy/parents'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const targetTempleId = (req.query.templeId as string) || undefined;
     const tenantId = getEffectiveTenantId(req.user!, targetTempleId);
     const targetRole = req.query.targetRole ? normalizeRole(req.query.targetRole as string) : '';
     const departmentId = req.query.departmentId ? String(req.query.departmentId) : undefined;
 
-    const reqParentRole = getRequiredParentRole(targetRole);
-    if (!reqParentRole) {
-      return res.json([]);
-    }
+    let reqParentRole = getRequiredParentRole(targetRole);
 
     let roleConditions: any[] = [];
     if (reqParentRole === 'super_admin') {
@@ -1864,14 +1875,53 @@ app.get(['/api/v1/hierarchy/parents', '/api/hierarchy/parents'], requireAuth, as
 
     let conditions: any[] = [
       eq(users.status, 'active'),
-      or(...roleConditions),
     ];
+
+    if (roleConditions.length > 0) {
+      conditions.push(or(...roleConditions));
+    }
 
     if (reqParentRole !== 'super_admin' && tenantId) {
       conditions.push(eq(users.templeId, tenantId));
     }
 
-    const eligibleParents = await db.select().from(users).where(and(...conditions)).orderBy(asc(users.name));
+    let eligibleParents = await db.select().from(users).where(and(...conditions)).orderBy(asc(users.name));
+
+    // Fallback: if no immediate parent role found, look for higher tier roles (dept head -> temple admin -> super admin)
+    if (eligibleParents.length === 0) {
+      const fallbackAdmins = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.status, 'active'),
+            or(
+              eq(users.role, 'temple_admin'),
+              eq(users.role, 'super_admin'),
+              eq(users.role, 'department_head'),
+              eq(users.role, 'leader')
+            ),
+            tenantId ? or(eq(users.templeId, tenantId), eq(users.role, 'super_admin')) : sql`1=1`
+          )
+        )
+        .orderBy(asc(users.name));
+      eligibleParents = fallbackAdmins;
+    }
+
+    // Always include user's assigned direct parent if set
+    if (req.user?.parentId) {
+      const parentAlreadyInList = eligibleParents.some((u) => u.id === req.user!.parentId);
+      if (!parentAlreadyInList) {
+        const [assignedParent] = await db.select().from(users).where(eq(users.id, req.user.parentId)).limit(1);
+        if (assignedParent) {
+          eligibleParents.unshift(assignedParent);
+        }
+      }
+    }
+
+    // Remove self from parents list
+    eligibleParents = eligibleParents.filter((u) => u.id !== req.user!.id);
+
     const formatted = await Promise.all(eligibleParents.map((u: any) => formatUserResponse(u)));
     res.json(formatted);
   } catch (err: any) {
