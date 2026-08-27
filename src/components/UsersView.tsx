@@ -42,6 +42,7 @@ import {
   canManageUser,
   canSeeUser,
   canAssignRole,
+  getAllowedTiers,
 } from '../utils/roleHierarchy';
 import { api } from '../services/api';
 
@@ -628,51 +629,20 @@ export const UsersView: React.FC<UsersViewProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Staff & Member Directory
+                Staff & Members
               </h1>
-              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
-                RBAC
-              </span>
               <span className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Shield className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                <span>Scope: <strong className="font-bold">{currentUser.name}</strong> ({getRoleDisplayName(currentUser.role)})</span>
+                <span><strong className="font-bold">{currentUser.name}</strong> ({getRoleDisplayName(currentUser.role)})</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Manage organizational hierarchy, supervisory reporting lines, and role assignments
+              Manage organization members, supervisory reporting lines, and role assignments
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          {/* View Mode Toggle: Hierarchy Tree vs Directory List */}
-          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center border border-slate-200 dark:border-slate-700 shadow-2xs">
-            <button
-              onClick={() => setViewMode('hierarchy')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'hierarchy'
-                  ? 'bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="Interactive 5-tier expandable tree view"
-            >
-              <GitFork className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Tree Hierarchy</span>
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="Flat directory cards list"
-            >
-              <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Directory List</span>
-            </button>
-          </div>
-
           {canManageUsers && (
             <button
               onClick={() => {
@@ -682,7 +652,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
               className="py-2 px-3.5 sm:px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
-              <span>Provision User</span>
+              <span>Add User</span>
             </button>
           )}
         </div>
@@ -690,7 +660,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
 
       {/* View Sub-Modes & Filters Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-4">
-        {/* Top bar: Search + Status Filter + View sub-selector */}
+        {/* Top bar: Search + Status Filter */}
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -746,10 +716,10 @@ export const UsersView: React.FC<UsersViewProps> = ({
           </div>
         </div>
 
-        {/* Quick Role Tier Filter Chips */}
+        {/* Quick Role Filter Chips strictly scoped to user role */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar border-t border-slate-100 dark:border-slate-800 pt-3">
           <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
-            <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Filter Tier:
+            <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Filter:
           </span>
           <button
             onClick={() => setSelectedRoleTier('all')}
@@ -759,58 +729,68 @@ export const UsersView: React.FC<UsersViewProps> = ({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            All Active ({visibleUsers.filter((u) => u.id !== currentUser.id).length})
+            All ({visibleUsers.filter((u) => u.id !== currentUser.id || visibleUsers.length === 1).length})
           </button>
-          <button
-            onClick={() => setSelectedRoleTier('super_admin')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedRoleTier === 'super_admin'
-                ? 'bg-purple-700 text-white shadow-xs'
-                : 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800'
-            }`}
-          >
-            Tier 1: Super Admin ({roleDistribution.super_admin})
-          </button>
-          <button
-            onClick={() => setSelectedRoleTier('temple_admin')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedRoleTier === 'temple_admin'
-                ? 'bg-blue-700 text-white shadow-xs'
-                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800'
-            }`}
-          >
-            Tier 2: Temple Admin ({roleDistribution.temple_admin})
-          </button>
-          <button
-            onClick={() => setSelectedRoleTier('department_head')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedRoleTier === 'department_head'
-                ? 'bg-amber-700 text-white shadow-xs'
-                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800'
-            }`}
-          >
-            Tier 3: Dept Head ({roleDistribution.department_head})
-          </button>
-          <button
-            onClick={() => setSelectedRoleTier('coordinator')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedRoleTier === 'coordinator'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800'
-            }`}
-          >
-            Tier 4: Coordinator ({roleDistribution.coordinator})
-          </button>
-          <button
-            onClick={() => setSelectedRoleTier('member')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedRoleTier === 'member'
-                ? 'bg-slate-800 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            Tier 5: Member ({roleDistribution.member})
-          </button>
+          {getAllowedTiers(currentUser.role).includes('super_admin') && (
+            <button
+              onClick={() => setSelectedRoleTier('super_admin')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedRoleTier === 'super_admin'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800'
+              }`}
+            >
+              Super Admins ({roleDistribution.super_admin})
+            </button>
+          )}
+          {getAllowedTiers(currentUser.role).includes('temple_admin') && (
+            <button
+              onClick={() => setSelectedRoleTier('temple_admin')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedRoleTier === 'temple_admin'
+                  ? 'bg-blue-700 text-white shadow-xs'
+                  : 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800'
+              }`}
+            >
+              Temple Admins ({roleDistribution.temple_admin})
+            </button>
+          )}
+          {getAllowedTiers(currentUser.role).includes('department_head') && (
+            <button
+              onClick={() => setSelectedRoleTier('department_head')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedRoleTier === 'department_head'
+                  ? 'bg-amber-700 text-white shadow-xs'
+                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800'
+              }`}
+            >
+              Department Heads ({roleDistribution.department_head})
+            </button>
+          )}
+          {getAllowedTiers(currentUser.role).includes('coordinator') && (
+            <button
+              onClick={() => setSelectedRoleTier('coordinator')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedRoleTier === 'coordinator'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800'
+              }`}
+            >
+              Coordinators ({roleDistribution.coordinator})
+            </button>
+          )}
+          {getAllowedTiers(currentUser.role).includes('member') && (
+            <button
+              onClick={() => setSelectedRoleTier('member')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedRoleTier === 'member'
+                  ? 'bg-slate-800 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              Members / Sevaks ({roleDistribution.member})
+            </button>
+          )}
         </div>
       </div>
 
@@ -947,7 +927,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   ),
                 },
               ]
-                .filter((tier) => selectedRoleTier === 'all' || selectedRoleTier === tier.roleKey)
+                .filter((tier) => getAllowedTiers(currentUser.role).includes(tier.roleKey as UserRole) && (selectedRoleTier === 'all' || selectedRoleTier === tier.roleKey))
                 .map((tier) => {
                   const TierIcon = tier.icon;
                   const count = tier.usersInTier.length;
