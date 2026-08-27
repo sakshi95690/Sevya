@@ -1054,7 +1054,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                             />
                           ) : (
                             <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 font-extrabold flex items-center justify-center text-sm border border-amber-200">
-                              {usr.name.charAt(0).toUpperCase()}
+                              {(usr.name || 'U').charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span
