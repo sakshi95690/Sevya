@@ -41,6 +41,7 @@ import {
   getRequiredParentRole,
   canManageUser,
   canSeeUser,
+  canAssignRole,
 } from '../utils/roleHierarchy';
 import { api } from '../services/api';
 
@@ -834,7 +835,6 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   icon: Shield,
                   usersInTier: visibleUsers.filter(
                     (u) =>
-                      u.id !== currentUser.id &&
                       normalizeRole(u.role) === 'super_admin' &&
                       (statusFilter === 'all' ||
                         (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
@@ -859,7 +859,6 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   icon: Building2,
                   usersInTier: visibleUsers.filter(
                     (u) =>
-                      u.id !== currentUser.id &&
                       normalizeRole(u.role) === 'temple_admin' &&
                       (statusFilter === 'all' ||
                         (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
@@ -885,7 +884,6 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   icon: Briefcase,
                   usersInTier: visibleUsers.filter(
                     (u) =>
-                      u.id !== currentUser.id &&
                       normalizeRole(u.role) === 'department_head' &&
                       (statusFilter === 'all' ||
                         (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
@@ -911,7 +909,6 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   icon: UserCheck,
                   usersInTier: visibleUsers.filter(
                     (u) =>
-                      u.id !== currentUser.id &&
                       normalizeRole(u.role) === 'coordinator' &&
                       (statusFilter === 'all' ||
                         (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
@@ -937,7 +934,6 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   icon: Users,
                   usersInTier: visibleUsers.filter(
                     (u) =>
-                      u.id !== currentUser.id &&
                       normalizeRole(u.role) === 'member' &&
                       (statusFilter === 'all' ||
                         (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
@@ -991,7 +987,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                           </div>
                         </div>
 
-                        {canManageUsers && (
+                        {canAssignRole(currentUser.role, tier.roleKey) && (
                           <button
                             onClick={() => {
                               setRole(tier.roleKey as UserRole);
@@ -1016,12 +1012,15 @@ export const UsersView: React.FC<UsersViewProps> = ({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {tier.usersInTier.map((usr) => {
                               const userDept = departments.find((d) => d.id === usr.departmentId);
-                              const canManageThisUser = canManageUsers && canManageTargetUser(usr.role);
+                              const isSelf = usr.id === currentUser.id;
+                              const canManageThisUser = canManageUsers && !isSelf && canManageTargetUser(usr.role);
 
                               return (
                                 <div
                                   key={usr.id}
-                                  className={`bg-white dark:bg-slate-800/60 border rounded-xl p-3.5 shadow-2xs transition-all hover:shadow-xs flex flex-col justify-between gap-3 ${tier.cardBorder}`}
+                                  className={`bg-white dark:bg-slate-800/60 border rounded-xl p-3.5 shadow-2xs transition-all hover:shadow-xs flex flex-col justify-between gap-3 ${
+                                    isSelf ? 'border-indigo-300 dark:border-indigo-800/80 bg-indigo-50/20 dark:bg-indigo-950/20' : tier.cardBorder
+                                  }`}
                                 >
                                   {/* User Info Header */}
                                   <div className="flex items-start justify-between gap-3">
@@ -1053,6 +1052,11 @@ export const UsersView: React.FC<UsersViewProps> = ({
                                           <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                                             {usr.name}
                                           </h4>
+                                          {isSelf && (
+                                            <span className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800 font-bold">
+                                              You
+                                            </span>
+                                          )}
                                           {usr.designationName && (
                                             <span className="text-[10px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 font-medium truncate">
                                               {usr.designationName}
@@ -1109,7 +1113,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
 
                                     {/* Action Buttons */}
                                     <div className="flex items-center gap-1 shrink-0">
-                                      {canManageThisUser && tier.tierNumber < 5 && (
+                                      {canManageUsers && tier.tierNumber < 5 && (
                                         <button
                                           onClick={() => handleAddSubordinateFromNode(usr)}
                                           className="px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
