@@ -587,6 +587,8 @@ export default function App() {
         projectId: data.projectId,
         departmentId: data.departmentId,
         organizerId: currentUser.id,
+        hostId: currentUser.id,
+        createdBy: currentUser,
         date: data.date,
         location: data.location || 'Zoom Meeting',
         agenda: data.agenda,
