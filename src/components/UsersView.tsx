@@ -687,865 +687,722 @@ export const UsersView: React.FC<UsersViewProps> = ({
         </div>
       </div>
 
-      {/* Hierarchy Chain Explainer Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-3">
-          <GitFork className="w-4 h-4 text-amber-600" />
-          <span>Organizational Hierarchy Chain:</span>
+      {/* View Sub-Modes & Filters Toolbar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-4">
+        {/* Top bar: Search + Status Filter + View sub-selector */}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search personnel by name, email, phone, role, designation, supervisor, or department..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-8 py-2.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all font-medium"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="ACTIVE">Active Personnel</option>
+              <option value="INVITED">Invited</option>
+              <option value="SUSPENDED">Suspended</option>
+              <option value="DISABLED">Disabled / Inactive</option>
+            </select>
+
+            {(searchTerm || selectedRoleTier !== 'all' || statusFilter !== 'all') && (
+              <button
+                onClick={resetHierarchyFilters}
+                className="px-3 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
-          <div className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center">1</span>
-            <div>
-              <p className="font-bold text-purple-900">Super Admin</p>
-              <p className="text-[9px] text-purple-700">Root Governance</p>
-            </div>
-          </div>
 
-          <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/60 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">2</span>
-            <div>
-              <p className="font-bold text-blue-900">Temple Admin</p>
-              <p className="text-[9px] text-blue-700">Reports to Super Admin</p>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-amber-600 text-white font-bold text-[10px] flex items-center justify-center">3</span>
-            <div>
-              <p className="font-bold text-amber-900">Department Head</p>
-              <p className="text-[9px] text-amber-700">Reports to Temple Admin</p>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center">4</span>
-            <div>
-              <p className="font-bold text-emerald-900">Coordinator</p>
-              <p className="text-[9px] text-emerald-700">Reports to Dept Head</p>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-2 col-span-2 sm:col-span-1">
-            <span className="w-5 h-5 rounded-full bg-slate-600 text-white font-bold text-[10px] flex items-center justify-center">5</span>
-            <div>
-              <p className="font-bold text-slate-900">Member</p>
-              <p className="text-[9px] text-slate-600">Reports to Coordinator</p>
-            </div>
-          </div>
+        {/* Quick Role Tier Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar border-t border-slate-100 dark:border-slate-800 pt-3">
+          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
+            <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Filter Tier:
+          </span>
+          <button
+            onClick={() => setSelectedRoleTier('all')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'all'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            All Active ({visibleUsers.filter((u) => u.id !== currentUser.id).length})
+          </button>
+          <button
+            onClick={() => setSelectedRoleTier('super_admin')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'super_admin'
+                ? 'bg-purple-700 text-white shadow-xs'
+                : 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800'
+            }`}
+          >
+            Tier 1: Super Admin ({roleDistribution.super_admin})
+          </button>
+          <button
+            onClick={() => setSelectedRoleTier('temple_admin')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'temple_admin'
+                ? 'bg-blue-700 text-white shadow-xs'
+                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800'
+            }`}
+          >
+            Tier 2: Temple Admin ({roleDistribution.temple_admin})
+          </button>
+          <button
+            onClick={() => setSelectedRoleTier('department_head')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'department_head'
+                ? 'bg-amber-700 text-white shadow-xs'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800'
+            }`}
+          >
+            Tier 3: Dept Head ({roleDistribution.department_head})
+          </button>
+          <button
+            onClick={() => setSelectedRoleTier('coordinator')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'coordinator'
+                ? 'bg-emerald-700 text-white shadow-xs'
+                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800'
+            }`}
+          >
+            Tier 4: Coordinator ({roleDistribution.coordinator})
+          </button>
+          <button
+            onClick={() => setSelectedRoleTier('member')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedRoleTier === 'member'
+                ? 'bg-slate-800 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            Tier 5: Member ({roleDistribution.member})
+          </button>
         </div>
       </div>
 
-      {/* Main Grid: Users Directory & Staff Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: User Directory */}
-        <div className="lg:col-span-2 space-y-4">
-          {viewMode === 'hierarchy' ? (
-            <>
-              {/* Quick Search & Tier Filter Bar */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search tree by name, email, phone, role, designation, or department..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 focus:bg-white text-slate-800 transition-all font-medium"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                        title="Clear search"
+      {/* Main Content Area - Full Width Clean Layout */}
+      <div className="w-full space-y-4">
+        {viewMode === 'hierarchy' ? (
+          <>
+            {/* Organizational Hierarchy Chain with Active Users Directly Inside */}
+            <div className="space-y-4">
+              {/* The 5-tier Organizational Chain Overview with Direct Expand/Collapse & User Listing */}
+              {[
+                {
+                  tierNumber: 1,
+                  roleKey: 'super_admin',
+                  roleName: 'Super Admin',
+                  roleDescription: 'Root Governance & System Oversight',
+                  reportsToText: 'Root Governance (No supervisor)',
+                  badgeClass: 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+                  dotClass: 'bg-purple-600',
+                  headerBg: 'bg-purple-50/70 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900/50',
+                  cardBorder: 'border-purple-200 dark:border-purple-900/40 hover:border-purple-300',
+                  icon: Shield,
+                  usersInTier: visibleUsers.filter(
+                    (u) =>
+                      u.id !== currentUser.id &&
+                      normalizeRole(u.role) === 'super_admin' &&
+                      (statusFilter === 'all' ||
+                        (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
+                          statusFilter.toUpperCase()) &&
+                      (!searchTerm ||
+                        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.phone || '').includes(searchTerm) ||
+                        (u.designationName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                  ),
+                },
+                {
+                  tierNumber: 2,
+                  roleKey: 'temple_admin',
+                  roleName: 'Temple Admin',
+                  roleDescription: 'Temple Operations & Administration',
+                  reportsToText: 'Reports directly to Super Admin',
+                  badgeClass: 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                  dotClass: 'bg-blue-600',
+                  headerBg: 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50',
+                  cardBorder: 'border-blue-200 dark:border-blue-900/40 hover:border-blue-300',
+                  icon: Building2,
+                  usersInTier: visibleUsers.filter(
+                    (u) =>
+                      u.id !== currentUser.id &&
+                      normalizeRole(u.role) === 'temple_admin' &&
+                      (statusFilter === 'all' ||
+                        (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
+                          statusFilter.toUpperCase()) &&
+                      (!searchTerm ||
+                        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.phone || '').includes(searchTerm) ||
+                        (u.parentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.designationName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                  ),
+                },
+                {
+                  tierNumber: 3,
+                  roleKey: 'department_head',
+                  roleName: 'Department Head',
+                  roleDescription: 'Departmental Leadership & Function Oversight',
+                  reportsToText: 'Reports directly to Temple Admin',
+                  badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+                  dotClass: 'bg-amber-600',
+                  headerBg: 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50',
+                  cardBorder: 'border-amber-200 dark:border-amber-900/40 hover:border-amber-300',
+                  icon: Briefcase,
+                  usersInTier: visibleUsers.filter(
+                    (u) =>
+                      u.id !== currentUser.id &&
+                      normalizeRole(u.role) === 'department_head' &&
+                      (statusFilter === 'all' ||
+                        (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
+                          statusFilter.toUpperCase()) &&
+                      (!searchTerm ||
+                        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.phone || '').includes(searchTerm) ||
+                        (u.parentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.designationName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                  ),
+                },
+                {
+                  tierNumber: 4,
+                  roleKey: 'coordinator',
+                  roleName: 'Coordinator',
+                  roleDescription: 'Operational Team Coordination & Activity Execution',
+                  reportsToText: 'Reports directly to Department Head',
+                  badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+                  dotClass: 'bg-emerald-600',
+                  headerBg: 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50',
+                  cardBorder: 'border-emerald-200 dark:border-emerald-900/40 hover:border-emerald-300',
+                  icon: UserCheck,
+                  usersInTier: visibleUsers.filter(
+                    (u) =>
+                      u.id !== currentUser.id &&
+                      normalizeRole(u.role) === 'coordinator' &&
+                      (statusFilter === 'all' ||
+                        (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
+                          statusFilter.toUpperCase()) &&
+                      (!searchTerm ||
+                        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.phone || '').includes(searchTerm) ||
+                        (u.parentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.designationName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                  ),
+                },
+                {
+                  tierNumber: 5,
+                  roleKey: 'member',
+                  roleName: 'Member',
+                  roleDescription: 'Seva Execution, Volunteers & Members',
+                  reportsToText: 'Reports directly to Coordinator',
+                  badgeClass: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+                  dotClass: 'bg-slate-600',
+                  headerBg: 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800',
+                  cardBorder: 'border-slate-200 dark:border-slate-800 hover:border-slate-300',
+                  icon: Users,
+                  usersInTier: visibleUsers.filter(
+                    (u) =>
+                      u.id !== currentUser.id &&
+                      normalizeRole(u.role) === 'member' &&
+                      (statusFilter === 'all' ||
+                        (u.accountStatus || (u.status === 'active' ? 'ACTIVE' : 'DISABLED')).toUpperCase() ===
+                          statusFilter.toUpperCase()) &&
+                      (!searchTerm ||
+                        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.phone || '').includes(searchTerm) ||
+                        (u.parentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (u.designationName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                  ),
+                },
+              ]
+                .filter((tier) => selectedRoleTier === 'all' || selectedRoleTier === tier.roleKey)
+                .map((tier) => {
+                  const TierIcon = tier.icon;
+                  const count = tier.usersInTier.length;
+
+                  return (
+                    <div
+                      key={tier.tierNumber}
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs transition-all"
+                    >
+                      {/* Tier Step Header */}
+                      <div
+                        className={`p-3.5 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${tier.headerBg}`}
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-slate-700 font-medium"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="ACTIVE">Active Personnel</option>
-                      <option value="INVITED">Invited</option>
-                      <option value="SUSPENDED">Suspended</option>
-                      <option value="DISABLED">Disabled</option>
-                    </select>
-
-                    {(searchTerm || selectedRoleTier !== 'all' || statusFilter !== 'all') && (
-                      <button
-                        onClick={resetHierarchyFilters}
-                        className="px-3 py-2 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                        Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Role Tier Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
-                    <Layers className="w-3.5 h-3.5 text-amber-600" /> Filter Tier:
-                  </span>
-                  <button
-                    onClick={() => setSelectedRoleTier('all')}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'all'
-                        ? 'bg-amber-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    All ({visibleUsers.filter((u) => u.id !== currentUser.id).length})
-                  </button>
-                  <button
-                    onClick={() => setSelectedRoleTier('super_admin')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'super_admin'
-                        ? 'bg-purple-700 text-white shadow-xs'
-                        : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
-                    }`}
-                  >
-                    Tier 1: Super Admin ({roleDistribution.super_admin})
-                  </button>
-                  <button
-                    onClick={() => setSelectedRoleTier('temple_admin')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'temple_admin'
-                        ? 'bg-blue-700 text-white shadow-xs'
-                        : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
-                    }`}
-                  >
-                    Tier 2: Temple Admin ({roleDistribution.temple_admin})
-                  </button>
-                  <button
-                    onClick={() => setSelectedRoleTier('department_head')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'department_head'
-                        ? 'bg-amber-700 text-white shadow-xs'
-                        : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
-                    }`}
-                  >
-                    Tier 3: Dept Head ({roleDistribution.department_head})
-                  </button>
-                  <button
-                    onClick={() => setSelectedRoleTier('coordinator')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'coordinator'
-                        ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                    }`}
-                  >
-                    Tier 4: Coordinator ({roleDistribution.coordinator})
-                  </button>
-                  <button
-                    onClick={() => setSelectedRoleTier('member')}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      selectedRoleTier === 'member'
-                        ? 'bg-slate-800 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
-                    }`}
-                  >
-                    Tier 5: Member ({roleDistribution.member})
-                  </button>
-                </div>
-              </div>
-
-              {/* Hierarchical Expandable Tree */}
-              <UserHierarchyTree
-                users={visibleUsers}
-                departments={departments}
-                designations={designations}
-                currentUser={currentUser}
-                searchTerm={searchTerm}
-                selectedRoleTier={selectedRoleTier}
-                statusFilter={statusFilter}
-                onEditUser={(usr) => setEditingUser(usr)}
-                onDeleteUser={(usr) => {
-                  setDeletingUser(usr);
-                  setDeleteConfirmationText('');
-                }}
-                onViewUserProfile={onViewUserProfile}
-                onAddSubordinate={handleAddSubordinateFromNode}
-              />
-            </>
-          ) : (
-            <>
-              {/* Multi-Level Hierarchical Filter & Search Module */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
-            {/* Search Bar & Scope Quick Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search staff by name, email, phone, designation, or reporting manager..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full pl-9 pr-8 py-2.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50 focus:bg-white transition-all font-medium"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm('');
-                      setCurrentPage(1);
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                    title="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={resetHierarchyFilters}
-                  className="px-3 py-2 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
-                  title="Reset all hierarchy and search filters"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                  Reset Filters
-                </button>
-              )}
-            </div>
-
-            {/* Quick Role Tier Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
-                <Layers className="w-3.5 h-3.5 text-amber-600" /> Tier:
-              </span>
-              <button
-                onClick={() => setSelectedRoleTier('all')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'all'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                All Tiers ({visibleUsers.length})
-              </button>
-              <button
-                onClick={() => setSelectedRoleTier('super_admin')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'super_admin'
-                    ? 'bg-purple-700 text-white shadow-xs'
-                    : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
-                }`}
-              >
-                Tier 1: Super Admin ({roleDistribution.super_admin})
-              </button>
-              <button
-                onClick={() => setSelectedRoleTier('temple_admin')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'temple_admin'
-                    ? 'bg-blue-700 text-white shadow-xs'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
-                }`}
-              >
-                Tier 2: Temple Admin ({roleDistribution.temple_admin})
-              </button>
-              <button
-                onClick={() => setSelectedRoleTier('department_head')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'department_head'
-                    ? 'bg-amber-700 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
-                }`}
-              >
-                Tier 3: Dept Head ({roleDistribution.department_head})
-              </button>
-              <button
-                onClick={() => setSelectedRoleTier('coordinator')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'coordinator'
-                    ? 'bg-emerald-700 text-white shadow-xs'
-                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                }`}
-              >
-                Tier 4: Coordinator ({roleDistribution.coordinator})
-              </button>
-              <button
-                onClick={() => setSelectedRoleTier('member')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedRoleTier === 'member'
-                    ? 'bg-slate-800 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                Tier 5: Member ({roleDistribution.member})
-              </button>
-            </div>
-
-            {/* Cascading Multi-Level Hierarchical Supervisor Selectors */}
-            <div className="pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                  <Network className="w-4 h-4 text-amber-600" />
-                  <span>Multi-Level Hierarchical Drill-Down</span>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md">
-                  Dynamic Cascading Filter
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Level 1: Top Administrators (Super Admin & Temple Admin) */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                    <span>Level 1: Administrator</span>
-                    <span className="text-[10px] text-purple-700 font-semibold">Tier 1 & 2</span>
-                  </label>
-                  <select
-                    value={selectedAdminId}
-                    onChange={(e) => handleSelectAdmin(e.target.value)}
-                    className={`w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium transition-all ${
-                      selectedAdminId !== 'all'
-                        ? 'border-purple-300 bg-purple-50/50 text-purple-900 font-bold'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    <option value="all">All Administrators ({availableAdmins.length})</option>
-                    {availableAdmins.map((admin) => (
-                      <option key={admin.id} value={admin.id}>
-                        {admin.name} ({getRoleDisplayName(admin.role)} • {getTotalBranchCount(admin.id, visibleUsers)} team)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Level 2: Department Heads (Cascades from Level 1 Admin) */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                    <span>Level 2: Dept Head</span>
-                    <span className="text-[10px] text-amber-700 font-semibold">
-                      Tier 3 ({availableDeptHeads.length})
-                    </span>
-                  </label>
-                  <select
-                    value={selectedDeptHeadId}
-                    onChange={(e) => handleSelectDeptHead(e.target.value)}
-                    disabled={availableDeptHeads.length === 0}
-                    className={`w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium transition-all ${
-                      selectedDeptHeadId !== 'all'
-                        ? 'border-amber-300 bg-amber-50/50 text-amber-900 font-bold'
-                        : availableDeptHeads.length === 0
-                        ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    <option value="all">
-                      {availableDeptHeads.length === 0
-                        ? 'No Dept Heads in branch'
-                        : `All Dept Heads (${availableDeptHeads.length})`}
-                    </option>
-                    {availableDeptHeads.map((dh) => (
-                      <option key={dh.id} value={dh.id}>
-                        {dh.name} ({getTotalBranchCount(dh.id, visibleUsers)} team)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Level 3: Coordinators (Cascades from Level 2 Dept Head / Level 1 Admin) */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                    <span>Level 3: Coordinator</span>
-                    <span className="text-[10px] text-emerald-700 font-semibold">
-                      Tier 4 ({availableCoordinators.length})
-                    </span>
-                  </label>
-                  <select
-                    value={selectedCoordinatorId}
-                    onChange={(e) => handleSelectCoordinator(e.target.value)}
-                    disabled={availableCoordinators.length === 0}
-                    className={`w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium transition-all ${
-                      selectedCoordinatorId !== 'all'
-                        ? 'border-emerald-300 bg-emerald-50/50 text-emerald-900 font-bold'
-                        : availableCoordinators.length === 0
-                        ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    <option value="all">
-                      {availableCoordinators.length === 0
-                        ? 'No Coordinators in branch'
-                        : `All Coordinators (${availableCoordinators.length})`}
-                    </option>
-                    {availableCoordinators.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({getDirectReportCount(c.id, visibleUsers)} direct reports)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Hierarchy Scope Mode & Account Status Selectors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-600 shrink-0">Filter Scope:</span>
-                  <select
-                    value={hierarchyScope}
-                    onChange={(e) => {
-                      setHierarchyScope(e.target.value as any);
-                      setCurrentPage(1);
-                    }}
-                    className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-slate-700 font-medium"
-                  >
-                    <option value="branch">Entire Branch (Manager + All Subordinates)</option>
-                    <option value="direct">Direct Reports Only (Immediate Next Tier)</option>
-                    <option value="exact">Selected Supervisor Only</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-600 shrink-0">Account Status:</span>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => {
-                      setStatusFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-slate-700 font-medium"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="ACTIVE">Active Personnel</option>
-                    <option value="INVITED">Invited</option>
-                    <option value="SUSPENDED">Suspended</option>
-                    <option value="LOCKED">Locked</option>
-                    <option value="DISABLED">Disabled / Inactive</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Hierarchy Breadcrumb Trail */}
-            {(selectedAdminUser || selectedDeptHeadUser || selectedCoordinatorUser) && (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 flex items-center gap-1.5 flex-wrap text-xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
-                  Active Branch:
-                </span>
-                <button
-                  onClick={() => {
-                    handleSelectAdmin('all');
-                    handleSelectDeptHead('all');
-                    handleSelectCoordinator('all');
-                  }}
-                  className="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-200 cursor-pointer transition-all"
-                >
-                  All Staff
-                </button>
-
-                {selectedAdminUser && (
-                  <>
-                    <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
-                    <button
-                      onClick={() => {
-                        handleSelectDeptHead('all');
-                        handleSelectCoordinator('all');
-                      }}
-                      className="px-2 py-0.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg border border-purple-200 flex items-center gap-1 cursor-pointer transition-all"
-                    >
-                      <Shield className="w-3 h-3 text-purple-700" />
-                      {selectedAdminUser.name} ({getRoleDisplayName(selectedAdminUser.role)})
-                    </button>
-                  </>
-                )}
-
-                {selectedDeptHeadUser && (
-                  <>
-                    <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
-                    <button
-                      onClick={() => {
-                        handleSelectCoordinator('all');
-                      }}
-                      className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-lg border border-amber-200 flex items-center gap-1 cursor-pointer transition-all"
-                    >
-                      <Briefcase className="w-3 h-3 text-amber-700" />
-                      {selectedDeptHeadUser.name} (Dept Head)
-                    </button>
-                  </>
-                )}
-
-                {selectedCoordinatorUser && (
-                  <>
-                    <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 font-bold rounded-lg border border-emerald-200 flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 text-emerald-700" />
-                      {selectedCoordinatorUser.name} (Coordinator)
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Results Count & Filter Status Strip */}
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-              <span>
-                Showing <strong className="text-slate-900 font-bold">{filteredUsers.length}</strong> personnel matching active hierarchy criteria
-              </span>
-              {filteredUsers.length > 0 && (
-                <span className="text-[11px] text-slate-400">
-                  Page {currentPage} of {totalPages}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* User Cards List */}
-          <div className="space-y-3">
-            {filteredUsers.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-3">
-                <Users className="w-10 h-10 text-slate-300 mx-auto" />
-                <h4 className="text-sm font-bold text-slate-700">No personnel found</h4>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  No staff members match the selected hierarchy branch, role tier, or search term.
-                </p>
-                {hasActiveFilters && (
-                  <button
-                    onClick={resetHierarchyFilters}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl cursor-pointer transition-all"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                    Reset All Hierarchy Filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              paginatedUsers.map((usr) => {
-                const userDept = departments.find((d) => d.id === usr.departmentId);
-                const isCurrentUser = usr.id === currentUser.id;
-                const canManageThisUser = canManageUsers && canManageTargetUser(usr.role);
-
-                return (
-                  <div
-                    key={usr.id}
-                    className={`bg-white border rounded-2xl p-4 shadow-xs transition-all hover:shadow-md ${
-                      isCurrentUser ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      {/* Avatar and Basic Info */}
-                      <div className="flex items-start gap-3">
-                        <div className="relative">
-                          {usr.avatarUrl || usr.avatar ? (
-                            <img
-                              src={usr.avatarUrl || usr.avatar}
-                              alt={usr.name}
-                              className="w-11 h-11 rounded-2xl object-cover border border-slate-200"
-                            />
-                          ) : (
-                            <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 font-extrabold flex items-center justify-center text-sm border border-amber-200">
-                              {(usr.name || 'U').charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                        <div className="flex items-center gap-3">
                           <span
-                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
-                              usr.accountStatus === 'ACTIVE' || usr.status === 'active'
-                                ? 'bg-emerald-500'
-                                : 'bg-rose-500'
-                            }`}
-                            title={`Status: ${usr.accountStatus || usr.status}`}
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-slate-900">{usr.name}</h3>
-                            {isCurrentUser && (
-                              <span className="px-2 py-0.5 text-[10px] font-extrabold bg-amber-100 text-amber-900 rounded-full border border-amber-300">
-                                You
+                            className={`w-7 h-7 rounded-xl ${tier.dotClass} text-white font-extrabold text-xs flex items-center justify-center shadow-xs shrink-0`}
+                          >
+                            {tier.tierNumber}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                {tier.roleName}
+                              </h3>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tier.badgeClass}`}
+                              >
+                                Tier {tier.tierNumber}
                               </span>
-                            )}
-                            <span
-                              className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border ${getRoleBadgeStyle(
-                                usr.role
-                              )}`}
-                            >
-                              {getRoleDisplayName(usr.role)} ({getRoleTierNumber(usr.role)})
-                            </span>
-                            {usr.accountStatus && usr.accountStatus !== 'ACTIVE' && (
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-800 border border-rose-200">
-                                {usr.accountStatus}
+                              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                                {count} {count === 1 ? 'Active User' : 'Active Users'}
                               </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
-                            <span>{usr.email}</span>
-                            {usr.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-slate-400" /> {usr.phone}
-                              </span>
-                            )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              {tier.reportsToText}
+                            </p>
                           </div>
                         </div>
+
+                        {canManageUsers && (
+                          <button
+                            onClick={() => {
+                              setRole(tier.roleKey as UserRole);
+                              setShowModal(true);
+                            }}
+                            className="self-start sm:self-auto px-3 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-300 hover:text-amber-900 bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-700 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                            title={`Provision a new ${tier.roleName}`}
+                          >
+                            <Plus className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>Add {tier.roleName}</span>
+                          </button>
+                        )}
                       </div>
 
-                      {/* Hierarchy Supervisor & Badges */}
-                      <div className="flex sm:flex-col sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 text-[11px]">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Active Users Directly Inside this Hierarchy Tier */}
+                      <div className="p-3.5 sm:p-4">
+                        {count === 0 ? (
+                          <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                            No active {tier.roleName.toLowerCase()}s found in this tier matching the criteria.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {tier.usersInTier.map((usr) => {
+                              const userDept = departments.find((d) => d.id === usr.departmentId);
+                              const canManageThisUser = canManageUsers && canManageTargetUser(usr.role);
+
+                              return (
+                                <div
+                                  key={usr.id}
+                                  className={`bg-white dark:bg-slate-800/60 border rounded-xl p-3.5 shadow-2xs transition-all hover:shadow-xs flex flex-col justify-between gap-3 ${tier.cardBorder}`}
+                                >
+                                  {/* User Info Header */}
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start gap-2.5 min-w-0">
+                                      <div className="relative shrink-0">
+                                        {usr.avatarUrl || usr.avatar ? (
+                                          <img
+                                            src={usr.avatarUrl || usr.avatar}
+                                            alt={usr.name}
+                                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                                          />
+                                        ) : (
+                                          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold flex items-center justify-center text-xs border border-amber-200 dark:border-amber-800">
+                                            {(usr.name || 'U').charAt(0).toUpperCase()}
+                                          </div>
+                                        )}
+                                        <span
+                                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                                            usr.accountStatus === 'ACTIVE' || usr.status === 'active'
+                                              ? 'bg-emerald-500'
+                                              : 'bg-rose-500'
+                                          }`}
+                                          title={`Status: ${usr.accountStatus || usr.status || 'Active'}`}
+                                        />
+                                      </div>
+
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                                            {usr.name}
+                                          </h4>
+                                          {usr.designationName && (
+                                            <span className="text-[10px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 font-medium truncate">
+                                              {usr.designationName}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                          {usr.email}
+                                        </p>
+
+                                        {usr.phone && (
+                                          <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5">
+                                            <Phone className="w-2.5 h-2.5" />
+                                            <span>{usr.phone}</span>
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Department / Direct reports badge */}
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                      {userDept && (
+                                        <span className="text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                                          <Building2 className="w-2.5 h-2.5 text-slate-400" />
+                                          <span className="truncate max-w-[100px]">{userDept.name}</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Immediate Reporting Supervisor Line */}
+                                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+                                    {usr.parentName ? (
+                                      <div
+                                        className="text-slate-600 dark:text-slate-400 flex items-center gap-1 truncate"
+                                        title={`Reports to: ${usr.parentName}`}
+                                      >
+                                        <UserCheck className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                                        <span className="truncate">
+                                          Reports to:{' '}
+                                          <strong className="text-slate-800 dark:text-slate-200">
+                                            {usr.parentName}
+                                          </strong>
+                                        </span>
+                                      </div>
+                                    ) : tier.tierNumber === 1 ? (
+                                      <span className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold">
+                                        Root Governance
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400">Direct Assignment</span>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {canManageThisUser && tier.tierNumber < 5 && (
+                                        <button
+                                          onClick={() => handleAddSubordinateFromNode(usr)}
+                                          className="px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                          title={`Add a subordinate reporting to ${usr.name}`}
+                                        >
+                                          <Plus className="w-2.5 h-2.5" />
+                                          <span>Subordinate</span>
+                                        </button>
+                                      )}
+
+                                      {onViewUserProfile && (
+                                        <button
+                                          onClick={() => onViewUserProfile(usr)}
+                                          className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+                                          title="View Dossier & Profile"
+                                        >
+                                          <Eye className="w-3 h-3" />
+                                        </button>
+                                      )}
+
+                                      {canManageThisUser && (
+                                        <button
+                                          onClick={() => setEditingUser(usr)}
+                                          className="p-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+                                          title="Edit user"
+                                        >
+                                          <Edit2 className="w-3 h-3" />
+                                        </button>
+                                      )}
+
+                                      {canManageThisUser && (
+                                        <button
+                                          onClick={() => {
+                                            setDeletingUser(usr);
+                                            setDeleteConfirmationText('');
+                                          }}
+                                          className="p-1 text-rose-600 dark:text-rose-400 hover:text-rose-800 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg cursor-pointer transition-colors"
+                                          title="Deactivate / delete user"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Flat Directory List View */}
+            <div className="space-y-3">
+              {filteredUsers.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3">
+                  <Users className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No personnel found</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                    No staff members match the selected role tier, status, or search term.
+                  </p>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={resetHierarchyFilters}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-xl cursor-pointer transition-all"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      Reset Filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {paginatedUsers.map((usr) => {
+                    const userDept = departments.find((d) => d.id === usr.departmentId);
+                    const isCurrentUser = usr.id === currentUser.id;
+                    const canManageThisUser = canManageUsers && canManageTargetUser(usr.role);
+
+                    return (
+                      <div
+                        key={usr.id}
+                        className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-2xs transition-all hover:shadow-xs flex flex-col justify-between gap-3 ${
+                          isCurrentUser
+                            ? 'border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800'
+                            : 'border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="relative shrink-0">
+                              {usr.avatarUrl || usr.avatar ? (
+                                <img
+                                  src={usr.avatarUrl || usr.avatar}
+                                  alt={usr.name}
+                                  className="w-11 h-11 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
+                                />
+                              ) : (
+                                <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold flex items-center justify-center text-sm border border-amber-200 dark:border-amber-800">
+                                  {(usr.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span
+                                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
+                                  usr.accountStatus === 'ACTIVE' || usr.status === 'active'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-rose-500'
+                                }`}
+                                title={`Status: ${usr.accountStatus || usr.status}`}
+                              />
+                            </div>
+
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                                  {usr.name}
+                                </h3>
+                                {isCurrentUser && (
+                                  <span className="px-2 py-0.5 text-[10px] font-extrabold bg-amber-100 text-amber-900 rounded-full border border-amber-300">
+                                    You
+                                  </span>
+                                )}
+                                <span
+                                  className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border ${getRoleBadgeStyle(
+                                    usr.role
+                                  )}`}
+                                >
+                                  {getRoleDisplayName(usr.role)} ({getRoleTierNumber(usr.role)})
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                                <span className="truncate">{usr.email}</span>
+                                {usr.phone && (
+                                  <span className="flex items-center gap-1 shrink-0">
+                                    <Phone className="w-3 h-3 text-slate-400" /> {usr.phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {userDept && (
+                              <span className="text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                                <Building2 className="w-2.5 h-2.5 text-slate-400" />
+                                {userDept.name}
+                              </span>
+                            )}
+                            {usr.designationName && (
+                              <span className="text-[10px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 font-medium">
+                                {usr.designationName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Supervisor Info & Action Buttons */}
+                        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
                           {usr.parentName ? (
                             <span
-                              className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-lg font-medium border border-slate-200 flex items-center gap-1"
+                              className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-[11px] font-medium border border-slate-200 dark:border-slate-700 flex items-center gap-1 truncate"
                               title="Immediate Reporting Supervisor"
                             >
-                              <UserCheck className="w-3 h-3 text-amber-600" />
-                              Reports to: <strong className="text-slate-900">{usr.parentName}</strong>
-                              {usr.parentRole && (
-                                <span className="text-[9px] text-slate-500 font-normal">
-                                  ({getRoleDisplayName(usr.parentRole)})
-                                </span>
-                              )}
+                              <UserCheck className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span className="truncate">
+                                Reports to: <strong className="text-slate-900 dark:text-slate-100">{usr.parentName}</strong>
+                              </span>
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg text-[10px]">
+                            <span className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold">
                               Top-level Supervisor
                             </span>
                           )}
-                        </div>
 
-                        <div className="flex items-center gap-2 mt-1">
-                          {userDept && (
-                            <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
-                              <Building2 className="w-2.5 h-2.5 text-slate-400" />
-                              {userDept.name}
-                            </span>
-                          )}
-                          {usr.designationName && (
-                            <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-medium">
-                              {usr.designationName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {onViewUserProfile && (
+                              <button
+                                onClick={() => onViewUserProfile(usr)}
+                                className="px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-300 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                title="View Operational Dossier"
+                              >
+                                <Eye className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Dossier
+                              </button>
+                            )}
 
-                    {/* Bottom Action Strip */}
-                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium flex items-center gap-1.5 text-[11px]">
-                        <Shield className="w-3.5 h-3.5 text-amber-600" />
-                        Role Tier {getRoleTierNumber(usr.role)} &bull; {usr.accountStatus || 'ACTIVE'}
-                      </span>
+                            {canManageThisUser && (
+                              <button
+                                onClick={() => setEditingUser(usr)}
+                                className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Edit user"
+                              >
+                                <Edit2 className="w-3 h-3 text-slate-600 dark:text-slate-400" /> Edit
+                              </button>
+                            )}
 
-                      <div className="flex items-center gap-2">
-                        {onViewUserProfile && (
-                          <button
-                            onClick={() => onViewUserProfile(usr)}
-                            className="px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                            title="View Operational Dossier & Details"
-                          >
-                            <Eye className="w-3 h-3 text-amber-600" /> Dossier
-                          </button>
-                        )}
-
-                        {canManageThisUser && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditingUser(usr)}
-                              className="px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                              title="Edit user details and reporting manager"
-                            >
-                              <Edit2 className="w-3 h-3 text-slate-600" /> Edit
-                            </button>
-
-                            {usr.id !== currentUser.id && (
+                            {canManageThisUser && usr.id !== currentUser.id && (
                               <button
                                 onClick={() => {
                                   setDeletingUser(usr);
                                   setDeleteConfirmationText('');
                                 }}
-                                className="px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                className="px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-400 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                                 title="Deactivate or delete user"
                               >
-                                <Trash2 className="w-3 h-3 text-rose-600" /> Manage
+                                <Trash2 className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                               </button>
                             )}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Pagination Controls Bar */}
-          {filteredUsers.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-slate-600">
-                <span>
-                  Showing <strong className="text-slate-900">{startIndex + 1}</strong> to{' '}
-                  <strong className="text-slate-900">{endIndex}</strong> of{' '}
-                  <strong className="text-slate-900">{filteredUsers.length}</strong> personnel
-                </span>
-                <span className="text-slate-300">|</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-slate-500 text-[11px]">Per page:</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-slate-50 text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    title="First page"
-                  >
-                    <ChevronsLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-
-                  <div className="flex items-center gap-1 px-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                      .map((p, idx, arr) => {
-                        const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
-                        return (
-                          <React.Fragment key={p}>
-                            {showEllipsisBefore && <span className="px-1 text-slate-400">...</span>}
-                            <button
-                              onClick={() => setCurrentPage(p)}
-                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                currentPage === p
-                                  ? 'bg-amber-600 text-white shadow-xs'
-                                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          </React.Fragment>
-                        );
-                      })}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    title="Next page"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    title="Last page"
-                  >
-                    <ChevronsRight className="w-3.5 h-3.5" />
-                  </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          )}
-            </>
-          )}
-        </div>
 
-        {/* Right Col: Role Distribution & Quick Hierarchy Stats */}
-        <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-600" />
-                Staff Role Distribution
-              </h3>
-              <p className="text-xs text-slate-500">Active personnel across hierarchy tiers</p>
-            </div>
+            {/* Pagination Controls Bar */}
+            {filteredUsers.length > 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <span>
+                    Showing <strong className="text-slate-900 dark:text-slate-100">{startIndex + 1}</strong> to{' '}
+                    <strong className="text-slate-900 dark:text-slate-100">{endIndex}</strong> of{' '}
+                    <strong className="text-slate-900 dark:text-slate-100">{filteredUsers.length}</strong> personnel
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">|</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">Per page:</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-800">Super Admins (Tier 1)</span>
-                <span className="font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">
-                  {roleDistribution.super_admin}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-800">Temple Admins (Tier 2)</span>
-                <span className="font-black px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs">
-                  {roleDistribution.temple_admin}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-800">Department Heads (Tier 3)</span>
-                <span className="font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 text-xs">
-                  {roleDistribution.department_head}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-800">Coordinators (Tier 4)</span>
-                <span className="font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">
-                  {roleDistribution.coordinator}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-800">Members & Devotees (Tier 5)</span>
-                <span className="font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-xs">
-                  {roleDistribution.member}
-                </span>
-              </div>
-            </div>
-          </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      title="First page"
+                    >
+                      <ChevronsLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
 
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-5 shadow-xs space-y-3">
-            <h4 className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              Hierarchical Rules in Action
-            </h4>
-            <ul className="text-[11px] text-amber-900/80 space-y-2 leading-relaxed">
-              <li className="flex items-start gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                <span><strong>Super Admin</strong> can provision and assign all tiers.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                <span><strong>Temple Admin</strong> assigns Dept Heads, Coordinators, Members.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                <span><strong>Dept Head</strong> assigns Coordinators & Members for their domain.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                <span><strong>Coordinator</strong> assigns Members & Sevaks.</span>
-              </li>
-            </ul>
-          </div>
-        </div>
+                    <span className="px-2 font-bold text-slate-700 dark:text-slate-300 text-xs">
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      title="Next page"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      title="Last page"
+                    >
+                      <ChevronsRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Provision New User Modal */}
