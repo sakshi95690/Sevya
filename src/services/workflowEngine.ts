@@ -19,7 +19,7 @@ import {
   sevas,
   feedbacks,
 } from '../db/schema.ts';
-import { eq, and, or, sql, inArray, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, or, sql, inArray, gte, lte, desc, ne } from 'drizzle-orm';
 import { sendWebPushNotification } from './webPushService.ts';
 import { normalizeRole, getRequiredParentRole } from '../utils/roleHierarchy.ts';
 import { isValidUuid } from '../middleware/auth.ts';
@@ -830,19 +830,22 @@ export async function createApprovalRequest(params: {
   const requesterRole = requester?.role ? normalizeRole(requester.role) : 'member';
   const requesterName = requester?.name || requester?.displayName || 'Devotee';
 
-  // 2. Resolve Direct Parent Approver
+  // 2. Resolve Direct Parent Approver (Requester CANNOT be their own approver)
   let targetParentUserId = parentUserId || approverUserId || requester?.parentId || undefined;
+  if (targetParentUserId === requesterId) {
+    targetParentUserId = undefined;
+  }
   let targetParentUser: any = null;
 
   if (targetParentUserId && isValidUuid(targetParentUserId)) {
-    const parentCheck = await db.select().from(users).where(eq(users.id, targetParentUserId)).limit(1);
+    const parentCheck = await db.select().from(users).where(and(eq(users.id, targetParentUserId), ne(users.id, requesterId))).limit(1);
     if (parentCheck.length > 0) {
       targetParentUser = parentCheck[0];
     }
   }
 
   // If requester didn't have parentId set in DB, but a valid parent was specified, save it for future requests
-  if (targetParentUser && requester && !requester.parentId) {
+  if (targetParentUser && requester && !requester.parentId && targetParentUser.id !== requester.id) {
     await db.update(users).set({ parentId: targetParentUser.id, updatedAt: new Date() }).where(eq(users.id, requester.id)).catch(() => {});
   }
 
@@ -856,14 +859,15 @@ export async function createApprovalRequest(params: {
         .where(
           and(
             eq(users.templeId, templeId),
-            eq(users.role, reqParentRole)
+            eq(users.role, reqParentRole),
+            ne(users.id, requesterId)
           )
         )
         .limit(1);
       if (candidates.length > 0) {
         targetParentUser = candidates[0];
         targetParentUserId = targetParentUser.id;
-        if (!requester.parentId) {
+        if (!requester.parentId && targetParentUser.id !== requester.id) {
           await db.update(users).set({ parentId: targetParentUser.id, updatedAt: new Date() }).where(eq(users.id, requester.id)).catch(() => {});
         }
       }
@@ -875,7 +879,7 @@ export async function createApprovalRequest(params: {
     const adminCandidates = await db
       .select()
       .from(users)
-      .where(and(eq(users.templeId, templeId), or(eq(users.role, 'temple_admin'), eq(users.role, 'super_admin'))))
+      .where(and(eq(users.templeId, templeId), ne(users.id, requesterId), or(eq(users.role, 'temple_admin'), eq(users.role, 'super_admin'))))
       .limit(1);
     if (adminCandidates.length > 0) {
       targetParentUser = adminCandidates[0];
