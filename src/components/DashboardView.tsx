@@ -57,15 +57,15 @@ const AutoDismissBanner: React.FC<{ name: string; templeName: string; roleLabel:
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   return (
-    <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-slate-950 px-4 py-2.5 rounded-2xl shadow-sm border border-amber-400 flex items-center justify-between gap-3 text-xs font-medium animate-in fade-in duration-300">
+    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 px-4 py-2.5 rounded-xl shadow-2xs border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3 text-xs font-medium animate-in fade-in duration-300">
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="text-sm shrink-0">👋</span>
         <div className="min-w-0 flex items-center gap-2">
-          <span className="font-extrabold text-slate-950 text-xs">
+          <span className="font-bold text-amber-900 dark:text-amber-200 text-xs">
             {greeting}, {name}!
           </span>
-          <span className="text-slate-900/90 hidden sm:inline text-[11px]">
-            {templeName && !/radha damodar/i.test(templeName) ? `• ${templeName} ` : ''}<span className="font-bold uppercase text-[10px] bg-slate-950/10 px-1.5 py-0.5 rounded ml-1">{roleLabel}</span>
+          <span className="text-amber-800/80 dark:text-amber-300/80 hidden sm:inline text-[11px]">
+            {templeName && !/radha damodar/i.test(templeName) ? `• ${templeName} ` : ''}<span className="font-semibold uppercase text-[10px] bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-1.5 py-0.5 rounded ml-1">{roleLabel}</span>
           </span>
         </div>
       </div>
@@ -75,7 +75,7 @@ const AutoDismissBanner: React.FC<{ name: string; templeName: string; roleLabel:
           setDismissed(true);
           sessionStorage.setItem('sevya_welcome_dismissed', 'true');
         }}
-        className="text-slate-900/70 hover:text-slate-950 p-1 rounded-lg hover:bg-slate-950/10 transition-colors shrink-0 cursor-pointer"
+        className="text-amber-800/60 hover:text-amber-950 dark:text-amber-300/60 dark:hover:text-amber-100 p-1 rounded-lg hover:bg-amber-200/50 dark:hover:bg-amber-900/50 transition-colors shrink-0 cursor-pointer"
         title="Dismiss banner"
       >
         <X className="w-4 h-4" />
