@@ -40,6 +40,9 @@ export interface ApprovalRequest {
   templeId: string;
   requesterId: string;
   requesterName?: string;
+  requesterEmail?: string;
+  requesterRole?: string;
+  requesterAvatar?: string;
   approvalType: string;
   title: string;
   description: string;
@@ -48,6 +51,10 @@ export interface ApprovalRequest {
   totalLevels: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
   metadataJson: any;
+  parentUserId?: string;
+  parentName?: string;
+  parentRole?: string;
+  canApprove?: boolean;
   createdAt: string;
   updatedAt: string;
   steps?: ApprovalStep[];
@@ -59,6 +66,7 @@ export interface ApprovalStep {
   level: number;
   approverRoleId: string;
   approverUserId?: string;
+  approverName?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
   comment: string;
   actionAt?: string;
@@ -133,13 +141,25 @@ export const createApprovalRequestApi = async (data: {
   amount?: number;
   entityType?: string;
   entityId?: string;
+  parentUserId?: string;
+  approverUserId?: string;
+  templeId?: string;
 }): Promise<ApprovalRequest> => {
   const res = await fetch('/api/v1/approvals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to submit approval request');
+  if (!res.ok) {
+    let errMsg = 'Failed to submit approval request';
+    try {
+      const errJson = await res.json();
+      errMsg = errJson.detail || errJson.message || errJson.error || errMsg;
+    } catch {
+      // ignore
+    }
+    throw new Error(errMsg);
+  }
   return res.json();
 };
 
@@ -153,7 +173,16 @@ export const processApprovalActionApi = async (
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify({ action, comment }),
   });
-  if (!res.ok) throw new Error('Failed to process approval action');
+  if (!res.ok) {
+    let errMsg = 'Failed to process approval action';
+    try {
+      const errJson = await res.json();
+      errMsg = errJson.detail || errJson.message || errJson.error || errMsg;
+    } catch {
+      // ignore
+    }
+    throw new Error(errMsg);
+  }
   return res.json();
 };
 
