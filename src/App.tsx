@@ -603,6 +603,18 @@ export default function App() {
     }
   };
 
+  const handleUpdateMeeting = async (meetingId: string, data: any) => {
+    try {
+      const updated = await api.updateMeeting(meetingId, data);
+      setMeetings((prev) => prev.map((m) => (m.id === meetingId ? { ...m, ...updated } : m)));
+      showSuccess(`Meeting '${updated.title || 'Meeting'}' updated successfully!`);
+      return updated;
+    } catch (err: any) {
+      showError(err.message || 'Cannot update meeting');
+      throw err;
+    }
+  };
+
   const handleDeleteMeeting = async (meetingId: string) => {
     try {
       await api.deleteMeeting(meetingId, currentUser);
@@ -1204,6 +1216,7 @@ export default function App() {
               tasks={tasks}
               currentUser={currentUser}
               onCreateMeeting={handleCreateMeeting}
+              onUpdateMeeting={handleUpdateMeeting}
               onDeleteMeeting={handleDeleteMeeting}
             />
           )}
