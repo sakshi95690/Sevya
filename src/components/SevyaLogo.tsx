@@ -1,51 +1,110 @@
-/**
- * SEVYA Public Asset & Image Utility
- * 
- * Allows developers to place any image file directly inside the frontend `public` directory
- * (e.g. `public/sevya-logo.png` or `public/badge.png`) and reference it directly as `/sevya-logo.png`.
- * 
- * Works seamlessly in both local development (Vite dev server) and production builds (Firebase Hosting).
- */
+import React, { useState } from 'react';
 
-/**
- * Resolves a public asset path ensuring proper leading slash and environment base URL.
- * 
- * Examples:
- *  - resolvePublicImage('sevya-logo.png') => '/sevya-logo.png'
- *  - resolvePublicImage('/sevya-logo.png') => '/sevya-logo.png'
- */
-export function resolvePublicImage(path?: string | null, fallback: string = '/sevya-logo.png'): string {
-  if (!path || typeof path !== 'string' || path.trim() === '') {
-    return fallback;
-  }
-
-  const trimmed = path.trim();
-
-  // If it is an external URL (http/https/data:), preserve it
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
-    return trimmed;
-  }
-
-  // Ensure absolute leading slash for public assets
-  const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  
-  // Prepend base URL if Vite is configured with a non-root base
-  const baseUrl = import.meta.env.BASE_URL || '/';
-  if (baseUrl !== '/' && !normalizedPath.startsWith(baseUrl)) {
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    return `${cleanBase}${normalizedPath}`;
-  }
-
-  return normalizedPath;
+interface SevyaLogoProps {
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'icon';
+  showText?: boolean;
+  lightText?: boolean;
+  collapsed?: boolean;
+  textColor?: string;
+  className?: string;
+  subtitle?: string;
 }
 
 /**
- * Default Public Asset Constants
- * Developers can replace these files directly in `/public` to automatically update brand assets.
+ * SINGLE SOURCE OF TRUTH FOR SEVYA BRANDING:
+ * Directly references the image file /logo.jpeg located inside the frontend /public folder.
+ * /public/logo.jpeg is used everywhere across the application (sidebar, welcome screen, header, modals, footers).
  */
-export const PUBLIC_ASSETS = {
-  LOGO: '/sevya-logo.png',
-  LOGO_PNG: '/logo.png',
-  LOGO_SVG: '/logo.svg',
-  BADGE: '/badge.png',
-} as const;
+export const SEVYA_LOGO_SRC = '/logo.jpeg';
+
+export const SevyaLogo: React.FC<SevyaLogoProps> = ({
+  size = 'md',
+  showText = true,
+  lightText = false,
+  collapsed = false,
+  textColor,
+  className = '',
+  subtitle,
+}) => {
+  const [imgSrc, setImgSrc] = useState<string>(SEVYA_LOGO_SRC);
+  const isCollapsed = collapsed || size === 'icon' || !showText;
+
+  const iconSizes = {
+    xs: 'w-6 h-6',
+    sm: 'w-8 h-8',
+    md: 'w-9 h-9',
+    lg: 'w-11 h-11',
+    xl: 'w-14 h-14',
+    icon: 'w-9 h-9',
+  };
+
+  const textSizes = {
+    xs: 'text-sm font-black tracking-tight',
+    sm: 'text-base font-black tracking-tight',
+    md: 'text-xl font-black tracking-tight',
+    lg: 'text-2xl font-black tracking-tight',
+    xl: 'text-3xl font-black tracking-tight',
+    icon: 'text-base font-black tracking-tight',
+  };
+
+  const defaultTextColor = lightText
+    ? 'text-white'
+    : 'text-amber-600 dark:text-amber-500';
+  const colorClass = textColor || defaultTextColor;
+
+  const handleImageError = () => {
+    // Graceful fallback chain if /logo.jpeg is missing or unavailable
+    if (imgSrc === '/logo.jpeg') {
+      setImgSrc('/logo.jpg');
+    } else if (imgSrc === '/logo.jpg') {
+      setImgSrc('/logo.png');
+    } else if (imgSrc === '/logo.png') {
+      setImgSrc('/sevya-logo.png');
+    } else if (imgSrc === '/sevya-logo.png') {
+      setImgSrc('/logo.svg');
+    }
+  };
+
+  const iconElement = (
+    <div
+      className={`${iconSizes[size] || 'w-9 h-9'} flex items-center justify-center shrink-0 rounded-lg overflow-hidden transition-transform duration-200`}
+    >
+      <img
+        src={imgSrc}
+        alt="SEVYA Logo"
+        onError={handleImageError}
+        loading="eager"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className="w-full h-full object-contain pointer-events-none select-none rounded-lg"
+      />
+    </div>
+  );
+
+  if (isCollapsed) {
+    return (
+      <div className={`flex items-center justify-center select-none shrink-0 ${className}`}>
+        {iconElement}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-2.5 select-none shrink-0 ${className}`}>
+      {iconElement}
+
+      <div className="flex flex-col justify-center min-w-0">
+        <div className="flex items-center leading-none">
+          <span className={`${textSizes[size] || 'text-xl font-black tracking-tight'} ${colorClass} transition-colors duration-200`}>
+            SEVYA
+          </span>
+        </div>
+        {subtitle && (
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 tracking-wider uppercase truncate mt-0.5">
+            {subtitle}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
