@@ -631,9 +631,25 @@ async function getUserPermittedApprovalIds(
       )
     );
 
+  // 3. User is direct parent of requester
+  const childUsers = await db.select({ id: users.id }).from(users).where(eq(users.parentId, userId));
+  let childRequests: { id: string }[] = [];
+  if (childUsers.length > 0) {
+    childRequests = await db
+      .select({ id: approvalRequests.id })
+      .from(approvalRequests)
+      .where(
+        and(
+          eq(approvalRequests.templeId, tenantId),
+          inArray(approvalRequests.requesterId, childUsers.map((c) => c.id))
+        )
+      );
+  }
+
   const allIds = new Set<string>([
     ...ownRequests.map((r) => r.id),
     ...stepRows.map((s) => s.approvalRequestId),
+    ...childRequests.map((c) => c.id),
   ]);
 
   return Array.from(allIds);
@@ -12537,9 +12553,9 @@ app.post('/api/v1/workflows/jobs/:jobId/retry', requireAuth, requireRole(['super
 });
 
 // GET /api/v1/approvals - Fetch approval requests
-app.get('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Response) => {
+app.get(['/api/v1/approvals', '/v1/approvals', '/api/approvals'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = getEffectiveTenantId(req.user!);
+    const tenantId = await getEffectiveTenantIdAsync(req.user!, req.query.templeId as string);
     const { status } = req.query;
 
     const permittedApprovalIds = await getUserPermittedApprovalIds(req.user!, tenantId);
@@ -12562,15 +12578,61 @@ app.get('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Response
       .where(and(...baseConditions))
       .orderBy(desc(approvalRequests.createdAt));
 
-    // Attach user names and steps
+    const normUserRole = normalizeRole(req.user!.role);
+    const isSuperOrTempleAdmin = normUserRole === 'super_admin' || normUserRole === 'temple_admin' || isSuperAdminEmail(req.user!.email);
+
+    // Attach user names, parent details, and step permissions
     const enriched = await Promise.all(
       list.map(async (item) => {
-        const reqUser = await db.select({ name: users.name }).from(users).where(eq(users.id, item.requesterId)).limit(1);
+        const [reqUser] = await db.select().from(users).where(eq(users.id, item.requesterId)).limit(1);
         const steps = await db.select().from(approvalSteps).where(eq(approvalSteps.approvalRequestId, item.id)).orderBy(asc(approvalSteps.level));
+
+        const stepsEnriched = await Promise.all(
+          steps.map(async (st) => {
+            let approverName = '';
+            if (st.approverUserId) {
+              const [appUser] = await db.select({ name: users.name, displayName: users.displayName }).from(users).where(eq(users.id, st.approverUserId)).limit(1);
+              if (appUser) approverName = appUser.displayName || appUser.name;
+            }
+            return {
+              ...st,
+              approverName,
+            };
+          })
+        );
+
+        // Resolve parent approver details
+        const meta = (item.metadataJson as any) || {};
+        let parentUserId = meta.parentUserId || reqUser?.parentId || undefined;
+        let parentName = meta.parentName || '';
+        let parentRole = meta.parentRole || '';
+
+        if (!parentName && parentUserId) {
+          const [pUser] = await db.select().from(users).where(eq(users.id, parentUserId)).limit(1);
+          if (pUser) {
+            parentName = pUser.displayName || pUser.name || '';
+            parentRole = normalizeRole(pUser.role);
+          }
+        }
+
+        // Determine if current logged-in user can approve this request
+        const currentStep = steps.find((s) => s.level === item.currentLevel);
+        const isAssignedApprover = currentStep?.approverUserId === req.user!.id;
+        const isParentOfRequester = parentUserId === req.user!.id || reqUser?.parentId === req.user!.id;
+        const isStepRoleMatch = currentStep?.approverRoleId && normalizeRole(currentStep.approverRoleId) === normUserRole;
+        const canApprove = item.status === 'PENDING' && (isSuperOrTempleAdmin || isAssignedApprover || isParentOfRequester || isStepRoleMatch);
+
         return {
           ...item,
-          requesterName: reqUser[0]?.name || 'Devotee',
-          steps,
+          requesterName: reqUser?.displayName || reqUser?.name || meta.requesterName || 'Devotee',
+          requesterEmail: reqUser?.email || '',
+          requesterRole: reqUser?.role ? normalizeRole(reqUser.role) : (meta.requesterRole || 'member'),
+          requesterAvatar: reqUser?.avatar || '',
+          parentUserId,
+          parentName,
+          parentRole,
+          canApprove,
+          steps: stepsEnriched,
         };
       })
     );
@@ -12582,10 +12644,10 @@ app.get('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Response
 });
 
 // POST /api/v1/approvals - Submit new approval request
-app.post('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post(['/api/v1/approvals', '/v1/approvals', '/api/approvals'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.user!.templeId;
-    const { approvalType, title, description, amount, entityType, entityId } = req.body;
+    const tenantId = await getEffectiveTenantIdAsync(req.user!, req.body.templeId);
+    const { approvalType, title, description, amount, entityType, entityId, parentUserId, approverUserId } = req.body;
 
     if (!title || !approvalType) {
       return sendRfc7807Error(res, 400, 'Bad Request', 'Title and approvalType are required.');
@@ -12595,12 +12657,28 @@ app.post('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Respons
       templeId: tenantId,
       requesterId: req.user!.id,
       approvalType,
-      title,
-      description,
+      title: title.trim(),
+      description: description ? description.trim() : '',
       amount: Number(amount) || 0,
       entityType,
       entityId,
+      parentUserId: parentUserId || approverUserId || undefined,
+      approverUserId: parentUserId || approverUserId || undefined,
     });
+
+    await logAuditDb(
+      tenantId,
+      req.user!.id,
+      'ApprovalRequest',
+      request.id,
+      'CREATE',
+      'approvals',
+      request.id,
+      `Submitted approval request "${title}" to parent/supervisor`,
+      null,
+      request,
+      req
+    );
 
     res.status(201).json(request);
   } catch (err: any) {
@@ -12609,13 +12687,18 @@ app.post('/api/v1/approvals', requireAuth, async (req: AuthRequest, res: Respons
 });
 
 // POST /api/v1/approvals/:id/action - Approve or Reject approval step
-app.post('/api/v1/approvals/:id/action', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post(['/api/v1/approvals/:id/action', '/v1/approvals/:id/action', '/api/approvals/:id/action'], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { action, comment } = req.body;
-    const tenantId = req.user!.templeId;
+    const tenantId = await getEffectiveTenantIdAsync(req.user!);
 
-    const [request] = await db.select().from(approvalRequests).where(and(eq(approvalRequests.id, id), eq(approvalRequests.templeId, tenantId))).limit(1);
+    const [request] = await db
+      .select()
+      .from(approvalRequests)
+      .where(and(eq(approvalRequests.id, id), eq(approvalRequests.templeId, tenantId)))
+      .limit(1);
+
     if (!request) {
       return sendRfc7807Error(res, 404, 'Not Found', 'Approval request not found.');
     }
@@ -12636,11 +12719,12 @@ app.post('/api/v1/approvals/:id/action', requireAuth, async (req: AuthRequest, r
     }
 
     const currentStep = steps[0];
+    const approverName = req.user!.name || 'Parent Approver';
 
     if (action === 'APPROVE') {
       await db
         .update(approvalSteps)
-        .set({ status: 'APPROVED', comment: comment || '', approverUserId: req.user!.id, actionAt: new Date() })
+        .set({ status: 'APPROVED', comment: comment ? comment.trim() : '', approverUserId: req.user!.id, actionAt: new Date() })
         .where(eq(approvalSteps.id, currentStep.id));
 
       if (currentLevel >= request.totalLevels) {
@@ -12651,15 +12735,40 @@ app.post('/api/v1/approvals/:id/action', requireAuth, async (req: AuthRequest, r
           .where(eq(approvalRequests.id, id))
           .returning();
 
+        // In-app notification to the Requester
+        await db.insert(notifications).values({
+          templeId: tenantId,
+          recipientUserId: request.requesterId,
+          type: 'approval_approved',
+          title: `Request Approved: ${request.title}`,
+          message: `Your parent/supervisor ${approverName} approved your request "${request.title}"${comment ? ` with remark: "${comment}"` : '.'}`,
+          linkId: id,
+          read: false,
+        }).catch((e) => console.warn('Failed to insert approval notification:', e));
+
         // Emit APPROVAL_APPROVED event
         await emitWorkflowEvent({
           templeId: tenantId,
           eventType: 'APPROVAL_APPROVED',
           entityType: 'approval',
           entityId: id,
-          payload: { requesterId: request.requesterId, title: request.title, status: 'APPROVED' },
+          payload: { requesterId: request.requesterId, title: request.title, status: 'APPROVED', approverName, comment },
           actorUserId: req.user!.id,
         });
+
+        await logAuditDb(
+          tenantId,
+          req.user!.id,
+          'ApprovalRequest',
+          id,
+          'APPROVE',
+          'approvals',
+          id,
+          `Approved request "${request.title}"${comment ? ` (${comment})` : ''}`,
+          request,
+          updatedReq,
+          req
+        );
 
         return res.json(updatedReq);
       } else {
@@ -12676,7 +12785,7 @@ app.post('/api/v1/approvals/:id/action', requireAuth, async (req: AuthRequest, r
       // REJECT
       await db
         .update(approvalSteps)
-        .set({ status: 'REJECTED', comment: comment || '', approverUserId: req.user!.id, actionAt: new Date() })
+        .set({ status: 'REJECTED', comment: comment ? comment.trim() : '', approverUserId: req.user!.id, actionAt: new Date() })
         .where(eq(approvalSteps.id, currentStep.id));
 
       const [updatedReq] = await db
@@ -12685,15 +12794,40 @@ app.post('/api/v1/approvals/:id/action', requireAuth, async (req: AuthRequest, r
         .where(eq(approvalRequests.id, id))
         .returning();
 
+      // In-app notification to the Requester
+      await db.insert(notifications).values({
+        templeId: tenantId,
+        recipientUserId: request.requesterId,
+        type: 'approval_rejected',
+        title: `Request Rejected: ${request.title}`,
+        message: `Your request "${request.title}" was rejected by ${approverName}${comment ? `: "${comment}"` : '.'}`,
+        linkId: id,
+        read: false,
+      }).catch((e) => console.warn('Failed to insert rejection notification:', e));
+
       // Emit APPROVAL_REJECTED event
       await emitWorkflowEvent({
         templeId: tenantId,
         eventType: 'APPROVAL_REJECTED',
         entityType: 'approval',
         entityId: id,
-        payload: { requesterId: request.requesterId, title: request.title, status: 'REJECTED' },
+        payload: { requesterId: request.requesterId, title: request.title, status: 'REJECTED', approverName, comment },
         actorUserId: req.user!.id,
       });
+
+      await logAuditDb(
+        tenantId,
+        req.user!.id,
+        'ApprovalRequest',
+        id,
+        'REJECT',
+        'approvals',
+        id,
+        `Rejected request "${request.title}"${comment ? ` (${comment})` : ''}`,
+        request,
+        updatedReq,
+        req
+      );
 
       return res.json(updatedReq);
     }
