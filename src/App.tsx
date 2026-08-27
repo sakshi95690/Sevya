@@ -1032,13 +1032,15 @@ export default function App() {
             >
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-xs uppercase shrink-0 shadow-2xs overflow-hidden border border-amber-300 dark:border-amber-600">
                 {currentUser.avatarUrl ? (
-                  <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" />
+                  <img src={currentUser.avatarUrl} alt={currentUser.name || 'User'} className="w-full h-full object-cover" />
                 ) : (
-                  currentUser.name
-                    .split(' ')
+                  (currentUser.name || 'User')
+                    .trim()
+                    .split(/\s+/)
                     .map((n) => n[0])
                     .join('')
                     .slice(0, 2)
+                    .toUpperCase()
                 )}
               </div>
               {(!isSidebarCollapsed || isMobileMenuOpen) && (
@@ -1412,7 +1414,19 @@ export default function App() {
         {/* System Footer (Hidden on Mobile) */}
         <footer className="hidden md:flex bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-8 py-3 justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 font-medium shrink-0 transition-colors">
           <div className="flex items-center gap-3">
-            <div>SEVYA • Temple Management System</div>
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo.jpeg"
+                alt="SEVYA"
+                className="w-4 h-4 object-contain rounded-xs"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
+              />
+              <span className="font-bold text-slate-700 dark:text-slate-300">SEVYA</span>
+              <span>•</span>
+              <span>Temple Management System</span>
+            </div>
             <span>•</span>
             <a
               href="#/privacy-policy"
