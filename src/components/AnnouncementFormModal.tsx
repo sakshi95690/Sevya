@@ -208,16 +208,16 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0 pr-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/15 text-amber-900 flex items-center justify-center border border-amber-500/30 shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800/80 shrink-0">
               <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
                 {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
               </h2>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 Broadcast vital notices, seva updates, and alerts to targeted roles
               </p>
             </div>
@@ -225,7 +225,7 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors shrink-0 cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
