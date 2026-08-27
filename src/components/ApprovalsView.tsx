@@ -230,6 +230,33 @@ export const ApprovalsView: React.FC = () => {
   };
 
   // Filter requests according to tabs, searches, and roles
+  const getApprovalPermissions = (req: ApprovalRequest) => {
+    if (!currentUser) {
+      return { isRequester: false, isRecipient: false, canApprove: false };
+    }
+    const isRequester = req.requesterId === currentUser.id;
+
+    // STRICT: Requester can NEVER approve or reject their own request!
+    if (isRequester) {
+      return { isRequester: true, isRecipient: false, canApprove: false };
+    }
+
+    const normRole = normalizeRole(currentUser.role);
+    const isSuperOrTempleAdmin = normRole === 'super_admin' || normRole === 'temple_admin';
+    const isDirectParent = req.parentUserId === currentUser.id;
+    const currentStep = req.steps?.find((s) => s.level === req.currentLevel);
+    const isStepAssigned = currentStep?.approverUserId === currentUser.id;
+    const isStepRoleMatch = currentStep?.approverRoleId && normalizeRole(currentStep.approverRoleId) === normRole;
+
+    const canApprove =
+      req.status === 'PENDING' &&
+      (Boolean(req.canApprove) || isDirectParent || isStepAssigned || isStepRoleMatch || isSuperOrTempleAdmin);
+
+    const isRecipient = isDirectParent || isStepAssigned || (Boolean(isStepRoleMatch) && !isRequester);
+
+    return { isRequester: false, isRecipient, canApprove };
+  };
+
   const filteredRequests = useMemo(() => {
     return requests.filter((req) => {
       // 1. Tab filtering
@@ -238,16 +265,10 @@ export const ApprovalsView: React.FC = () => {
 
       // 2. Pending sub-filters
       if (activeTab === 'pending' && currentUser) {
-        const isMyOwnRequest = req.requesterId === currentUser.id;
-        const isAssignedToMe =
-          req.canApprove ||
-          req.parentUserId === currentUser.id ||
-          req.steps?.some(
-            (s) => s.level === req.currentLevel && s.approverUserId === currentUser.id
-          );
+        const { isRequester, canApprove } = getApprovalPermissions(req);
 
-        if (pendingFilter === 'needs_my_review' && !isAssignedToMe) return false;
-        if (pendingFilter === 'my_requests' && !isMyOwnRequest) return false;
+        if (pendingFilter === 'needs_my_review' && (!canApprove || isRequester)) return false;
+        if (pendingFilter === 'my_requests' && !isRequester) return false;
       }
 
       // 3. Type filter
@@ -270,16 +291,14 @@ export const ApprovalsView: React.FC = () => {
   }, [requests, activeTab, pendingFilter, typeFilter, searchQuery, currentUser]);
 
   const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
-  const needsMyReviewCount = requests.filter(
-    (r) =>
-      r.status === 'PENDING' &&
-      (r.canApprove ||
-        r.parentUserId === currentUser?.id ||
-        r.steps?.some((s) => s.level === r.currentLevel && s.approverUserId === currentUser?.id))
-  ).length;
-  const myRequestsPendingCount = requests.filter(
-    (r) => r.status === 'PENDING' && r.requesterId === currentUser?.id
-  ).length;
+  const needsMyReviewCount = requests.filter((r) => {
+    const { isRequester, canApprove } = getApprovalPermissions(r);
+    return r.status === 'PENDING' && canApprove && !isRequester;
+  }).length;
+  const myRequestsPendingCount = requests.filter((r) => {
+    const { isRequester } = getApprovalPermissions(r);
+    return r.status === 'PENDING' && isRequester;
+  }).length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -513,13 +532,14 @@ export const ApprovalsView: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRequests.map((req) => {
-            const isMyRequest = currentUser && req.requesterId === currentUser.id;
-            const canUserApprove =
-              req.status === 'PENDING' &&
-              (req.canApprove ||
-                req.parentUserId === currentUser?.id ||
-                currentUser?.role === 'super_admin' ||
-                currentUser?.role === 'temple_admin');
+            const { isRequester, isRecipient, canApprove } = getApprovalPermissions(req);
+            const isPending = req.status === 'PENDING';
+            const isApproved = req.status === 'APPROVED';
+            const isRejected = req.status === 'REJECTED';
+
+            // Find any decision comment from steps
+            const decidedStep = req.steps?.find((s) => s.status === 'APPROVED' || s.status === 'REJECTED');
+            const decisionComment = decidedStep?.comment;
 
             return (
               <div
@@ -530,24 +550,36 @@ export const ApprovalsView: React.FC = () => {
                 <div>
                   {/* Top Badges */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
-                      {req.approvalType}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
+                        {req.approvalType}
+                      </span>
+                      {isRequester && (
+                        <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded text-[10px] font-semibold">
+                          Your Request
+                        </span>
+                      )}
+                      {canApprove && isPending && (
+                        <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded text-[10px] font-semibold animate-pulse">
+                          Action Required
+                        </span>
+                      )}
+                    </div>
 
-                    {req.status === 'PENDING' && (
-                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                    {isPending && (
+                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0">
                         <Clock className="w-3 h-3 text-amber-600" />
                         Pending Review
                       </span>
                     )}
-                    {req.status === 'APPROVED' && (
-                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                    {isApproved && (
+                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                         Approved
                       </span>
                     )}
-                    {req.status === 'REJECTED' && (
-                      <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                    {isRejected && (
+                      <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0">
                         <XCircle className="w-3 h-3 text-rose-600" />
                         Rejected
                       </span>
@@ -567,6 +599,16 @@ export const ApprovalsView: React.FC = () => {
                     <div className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold rounded-lg">
                       <DollarSign className="w-3.5 h-3.5" />
                       <span>Amount: ₹{req.amount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  {/* Rejection Remark Preview if rejected */}
+                  {isRejected && decisionComment && (
+                    <div className="mt-3 p-2 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-xl text-xs text-rose-800 dark:text-rose-300">
+                      <span className="font-bold block text-[10px] uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                        Rejection Remark:
+                      </span>
+                      <p className="line-clamp-2 italic text-[11px] mt-0.5">"{decisionComment}"</p>
                     </div>
                   )}
 
@@ -597,7 +639,7 @@ export const ApprovalsView: React.FC = () => {
                         {req.requesterName ? req.requesterName.charAt(0).toUpperCase() : 'D'}
                       </div>
                       <span className="truncate font-medium text-slate-700 dark:text-slate-300">
-                        {isMyRequest ? 'You (Requester)' : req.requesterName || 'Devotee'}
+                        {isRequester ? 'You (Requester)' : req.requesterName || 'Devotee'}
                       </span>
                     </div>
 
@@ -606,9 +648,9 @@ export const ApprovalsView: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Actions */}
-                  {req.status === 'PENDING' ? (
-                    canUserApprove ? (
+                  {/* Actions: Strictly based on permissions */}
+                  {isPending ? (
+                    canApprove && !isRequester ? (
                       <button
                         onClick={() => setSelectedRequest(req)}
                         className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
@@ -617,9 +659,19 @@ export const ApprovalsView: React.FC = () => {
                         <span>Review & Decide</span>
                       </button>
                     ) : (
-                      <div className="w-full py-1.5 px-3 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 font-medium text-center flex items-center justify-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>Awaiting Supervisor Review</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 py-1.5 px-3 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 font-medium text-center flex items-center justify-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Awaiting Supervisor Review</span>
+                        </div>
+                        <button
+                          onClick={() => setSelectedRequest(req)}
+                          className="py-1.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                          title="View Request Details"
+                        >
+                          <Info className="w-3.5 h-3.5" />
+                          <span>Details</span>
+                        </button>
                       </div>
                     )
                   ) : (
@@ -638,146 +690,191 @@ export const ApprovalsView: React.FC = () => {
         </div>
       )}
 
-      {/* REVIEW & APPROVE MODAL */}
-      {selectedRequest && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="min-w-0 pr-2">
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Approval Request Details
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
-                  {selectedRequest.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedRequest(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0 p-1"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
+      {/* REVIEW & APPROVE / DETAILS MODAL */}
+      {selectedRequest && (() => {
+        const { isRequester, canApprove } = getApprovalPermissions(selectedRequest);
+        const isPending = selectedRequest.status === 'PENDING';
+        const isApproved = selectedRequest.status === 'APPROVED';
+        const isRejected = selectedRequest.status === 'REJECTED';
+        const canReviewAndDecide = isPending && canApprove && !isRequester;
 
-            {/* Request Summary Card */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl space-y-2.5 text-xs border border-slate-200/70 dark:border-slate-700/60">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold">Request Type:</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100 uppercase px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px]">
-                  {selectedRequest.approvalType}
-                </span>
-              </div>
+        const decidedStep = selectedRequest.steps?.find((s) => s.status === 'APPROVED' || s.status === 'REJECTED');
+        const decisionComment = decidedStep?.comment;
+        const deciderName = decidedStep?.approverName || selectedRequest.parentName || 'Supervisor';
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold">Requester:</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {selectedRequest.requesterName || 'Devotee'} {selectedRequest.requesterRole ? `(${formatRoleLabel(selectedRequest.requesterRole)})` : ''}
-                </span>
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="min-w-0 pr-2">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {canReviewAndDecide ? 'Review & Decide Request' : 'Approval Request Details'}
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
+                    {selectedRequest.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedRequest(null);
+                    setActionComment('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0 p-1"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold">Send Approval To:</span>
-                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                  <UserCheck className="w-3.5 h-3.5" />
-                  {selectedRequest.parentName || 'Designated Supervisor'}
-                </span>
-              </div>
-
-              {selectedRequest.amount > 0 && (
+              {/* Request Summary Card */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl space-y-2.5 text-xs border border-slate-200/70 dark:border-slate-700/60">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Amount:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                    ₹{selectedRequest.amount.toLocaleString()}
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Request Type:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 uppercase px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px]">
+                    {selectedRequest.approvalType}
                   </span>
                 </div>
-              )}
 
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold block mb-1">Details / Description:</span>
-                <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                  {selectedRequest.description || 'No additional details provided.'}
-                </p>
-              </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Requester:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    {isRequester ? 'You (Requester)' : selectedRequest.requesterName || 'Devotee'}{' '}
+                    {selectedRequest.requesterRole ? `(${formatRoleLabel(selectedRequest.requesterRole)})` : ''}
+                  </span>
+                </div>
 
-              {/* Status Outcome if already decided */}
-              {selectedRequest.status !== 'PENDING' && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-400 font-semibold block mb-1">Outcome Status:</span>
-                  <div
-                    className={`p-2.5 rounded-lg text-xs font-bold flex items-center gap-2 ${
-                      selectedRequest.status === 'APPROVED'
-                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200'
-                        : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200'
-                    }`}
-                  >
-                    {selectedRequest.status === 'APPROVED' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-rose-600" />
-                    )}
-                    <span>
-                      {selectedRequest.status === 'APPROVED' ? 'Approved' : 'Rejected'}
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Send Approval To:</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    {selectedRequest.parentName || 'Designated Supervisor'}{' '}
+                    {selectedRequest.parentRole ? `(${formatRoleLabel(selectedRequest.parentRole)})` : ''}
+                  </span>
+                </div>
+
+                {selectedRequest.amount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">Amount:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                      ₹{selectedRequest.amount.toLocaleString()}
                     </span>
                   </div>
+                )}
+
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold block mb-1">
+                    Details / Description:
+                  </span>
+                  <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    {selectedRequest.description || 'No additional details provided.'}
+                  </p>
+                </div>
+
+                {/* Status Outcome Banner */}
+                {isPending ? (
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold block">Status: Pending Review</span>
+                        <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
+                          {isRequester
+                            ? `Your request was submitted to ${selectedRequest.parentName || 'your supervisor'} and is awaiting review.`
+                            : `This request is pending review by ${selectedRequest.parentName || 'the assigned supervisor'}.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold block">Decision Outcome:</span>
+                    <div
+                      className={`p-3 rounded-xl text-xs font-semibold flex flex-col gap-1.5 ${
+                        isApproved
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                          : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-sm">
+                        {isApproved ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-rose-600" />
+                        )}
+                        <span>{isApproved ? 'Approved' : 'Rejected'}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                        Decided by <span className="font-bold">{deciderName}</span> on{' '}
+                        {new Date(selectedRequest.updatedAt || selectedRequest.createdAt).toLocaleDateString()}
+                      </p>
+                      {decisionComment && (
+                        <div className="mt-1 pt-1.5 border-t border-slate-200 dark:border-slate-700/60 text-[11px] italic">
+                          <span className="font-semibold not-italic">Remarks / Reason: </span>"{decisionComment}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Approver Remarks form (ONLY if logged-in user can decide & is NOT requester) */}
+              {canReviewAndDecide && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Remarks / Reason <span className="text-slate-400 font-normal">(Required for rejection, optional for approval)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter remarks or reason for your decision..."
+                    value={actionComment}
+                    onChange={(e) => setActionComment(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
+                  />
                 </div>
               )}
-            </div>
 
-            {/* Approver Remarks form (if pending) */}
-            {selectedRequest.status === 'PENDING' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Remarks / Reason (Optional for approval, recommended for rejection)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Enter remarks, notes, or reason for decision..."
-                  value={actionComment}
-                  onChange={(e) => setActionComment(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
-                />
+              {/* Action Buttons: Strictly render Approve/Reject ONLY for Approver */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRequest(null);
+                    setActionComment('');
+                  }}
+                  disabled={actionProcessing}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
+                >
+                  Close
+                </button>
+
+                {canReviewAndDecide && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleProcessAction('REJECT')}
+                      disabled={actionProcessing}
+                      className="px-4 py-2 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                      <span>Reject</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleProcessAction('APPROVE')}
+                      disabled={actionProcessing}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      <span>Approve</span>
+                    </button>
+                  </>
+                )}
               </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setSelectedRequest(null)}
-                disabled={actionProcessing}
-                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
-              >
-                Close
-              </button>
-
-              {selectedRequest.status === 'PENDING' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleProcessAction('REJECT')}
-                    disabled={actionProcessing}
-                    className="px-4 py-2 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                    <span>Reject</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleProcessAction('APPROVE')}
-                    disabled={actionProcessing}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    <span>Approve</span>
-                  </button>
-                </>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* NEW APPROVAL REQUEST MODAL */}
       {showSubmitModal && (
