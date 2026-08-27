@@ -148,9 +148,9 @@ export function isImmediateSubordinate(callerRole?: string | null, targetRole?: 
  * Determines whether caller can see target user in lists, search, reports, and dropdowns.
  * Strict Role Visibility Rules:
  * - Super Admin: Can view all roles across the organization.
- * - Temple Admin: Can view Temple Admins, Department Heads, Coordinators, and Members. Super Admin is NEVER visible.
- * - Department Head: Can view self, Coordinators, and Members. Super Admin and Temple Admin are NEVER visible.
- * - Coordinator: Can view self and Members. Super Admin, Temple Admin, and Department Head are NEVER visible.
+ * - Temple Admin: Can view Department Heads, Coordinators, and Members. Super Admin is NEVER visible.
+ * - Department Head: Can view Coordinators and Members. Super Admin and Temple Admin are NEVER visible.
+ * - Coordinator: Can view Members. Super Admin, Temple Admin, and Department Head are NEVER visible.
  * - Member: Can only view self.
  */
 export function canSeeUser(
@@ -167,20 +167,20 @@ export function canSeeUser(
   if (cRole === 'super_admin') return true;
 
   if (cRole === 'temple_admin') {
-    return tRole !== 'super_admin';
+    // Temple Admin: Can view Department Heads, Coordinators, Members (and other Temple Admins if self). Never Super Admin.
+    if (tRole === 'super_admin') return false;
+    return tRole === 'department_head' || tRole === 'coordinator' || tRole === 'member' || (callerId && targetId && callerId === targetId);
   }
 
   if (cRole === 'department_head') {
-    if (['super_admin', 'temple_admin', 'department_head'].includes(tRole)) {
-      return Boolean(callerId && targetId && callerId === targetId);
-    }
+    // Department Head: Do NOT show Super Admin or Temple Admin anywhere in their user list/hierarchy. Show only Coordinators and Members (and self).
+    if (callerId && targetId && callerId === targetId) return true;
     return tRole === 'coordinator' || tRole === 'member';
   }
 
   if (cRole === 'coordinator') {
-    if (['super_admin', 'temple_admin', 'department_head', 'coordinator'].includes(tRole)) {
-      return Boolean(callerId && targetId && callerId === targetId);
-    }
+    // Coordinator: Show only Members/Sevaks they can manage (and self).
+    if (callerId && targetId && callerId === targetId) return true;
     return tRole === 'member';
   }
 
@@ -200,13 +200,13 @@ export function getAllowedTiers(callerRole?: string | null): UserRole[] {
     return ['super_admin', 'temple_admin', 'department_head', 'coordinator', 'member'];
   }
   if (cRole === 'temple_admin') {
-    return ['temple_admin', 'department_head', 'coordinator', 'member'];
-  }
-  if (cRole === 'department_head') {
     return ['department_head', 'coordinator', 'member'];
   }
-  if (cRole === 'coordinator') {
+  if (cRole === 'department_head') {
     return ['coordinator', 'member'];
+  }
+  if (cRole === 'coordinator') {
+    return ['member'];
   }
   return ['member'];
 }
