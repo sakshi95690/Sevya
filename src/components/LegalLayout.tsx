@@ -118,11 +118,11 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <img
-              src="/logo.jpeg"
+              src="/logo.png"
               alt="SEVYA"
-              className="w-4 h-4 object-contain rounded-xs"
+              className="w-4 h-4 object-contain"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/logo.png';
+                (e.target as HTMLImageElement).src = '/sevya-logo.png';
               }}
             />
             <p>© {new Date().getFullYear()} SEVYA. Temple & Seva Project Management. All rights reserved.</p>
