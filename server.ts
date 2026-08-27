@@ -12665,12 +12665,16 @@ app.get(['/api/v1/approvals', '/v1/approvals', '/api/approvals'], requireAuth, a
           }
         }
 
-        // Determine if current logged-in user can approve this request
+        // Determine if current logged-in user can approve this request (Requester can NEVER approve own request)
         const currentStep = steps.find((s) => s.level === item.currentLevel);
-        const isAssignedApprover = currentStep?.approverUserId === req.user!.id;
-        const isParentOfRequester = parentUserId === req.user!.id || reqUser?.parentId === req.user!.id;
-        const isStepRoleMatch = currentStep?.approverRoleId && normalizeRole(currentStep.approverRoleId) === normUserRole;
-        const canApprove = item.status === 'PENDING' && (isSuperOrTempleAdmin || isAssignedApprover || isParentOfRequester || isStepRoleMatch);
+        const isRequester = item.requesterId === req.user!.id;
+        const isAssignedApprover = Boolean(currentStep?.approverUserId && currentStep.approverUserId === req.user!.id);
+        const isParentOfRequester = Boolean(
+          (parentUserId && parentUserId === req.user!.id) ||
+          (reqUser?.parentId && reqUser.parentId === req.user!.id)
+        );
+        const isStepRoleMatch = Boolean(currentStep?.approverRoleId && normalizeRole(currentStep.approverRoleId) === normUserRole);
+        const canApprove = !isRequester && item.status === 'PENDING' && (isSuperOrTempleAdmin || isAssignedApprover || isParentOfRequester || isStepRoleMatch);
 
         return {
           ...item,
@@ -12753,6 +12757,11 @@ app.post(['/api/v1/approvals/:id/action', '/v1/approvals/:id/action', '/api/appr
       return sendRfc7807Error(res, 404, 'Not Found', 'Approval request not found.');
     }
 
+    // STRICT CHECK: Requester CANNOT review, approve, or reject their own request!
+    if (request.requesterId === req.user!.id) {
+      return sendRfc7807Error(res, 403, 'Forbidden', 'Requesters cannot review, approve, or reject their own approval request.');
+    }
+
     if (request.status !== 'PENDING') {
       return sendRfc7807Error(res, 400, 'Invalid Request', `Request is already ${request.status}.`);
     }
@@ -12769,6 +12778,17 @@ app.post(['/api/v1/approvals/:id/action', '/v1/approvals/:id/action', '/api/appr
     }
 
     const currentStep = steps[0];
+    const normUserRole = normalizeRole(req.user!.role);
+    const isSuperOrTempleAdmin = normUserRole === 'super_admin' || normUserRole === 'temple_admin' || isSuperAdminEmail(req.user!.email);
+    const isAssignedApprover = Boolean(currentStep.approverUserId && currentStep.approverUserId === req.user!.id);
+    const meta = (request.metadataJson as any) || {};
+    const isParentOfRequester = Boolean(meta.parentUserId === req.user!.id);
+    const isStepRoleMatch = Boolean(currentStep.approverRoleId && normalizeRole(currentStep.approverRoleId) === normUserRole);
+
+    if (!isAssignedApprover && !isParentOfRequester && !isStepRoleMatch && !isSuperOrTempleAdmin) {
+      return sendRfc7807Error(res, 403, 'Forbidden', 'You are not authorized as the designated approver for this request.');
+    }
+
     const approverName = req.user!.name || 'Parent Approver';
 
     if (action === 'APPROVE') {
