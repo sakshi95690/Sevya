@@ -830,7 +830,7 @@ export default function App() {
     { id: 'recurring', label: 'Recurring Tasks', icon: RotateCcw, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'] },
     { id: 'secretaries', label: 'Secretaries', icon: UserCheck, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'] },
     { id: 'proofs', label: 'Proof Reviews', icon: ShieldCheck, badge: dashboardStats.underReviewTasks, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'] },
-    { id: 'users', label: 'Users', icon: Users, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'] },
+    { id: 'users', label: 'Staff & Members', icon: Users, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'] },
     { id: 'settings', label: 'Settings', icon: Settings, roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator', 'member'] },
   ];
 
