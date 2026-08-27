@@ -289,9 +289,9 @@ function buildOrganizationalTree(
     }
   }
 
-  // Pick up any remaining orphaned users that haven't been visited yet
-  for (let lvl = 1; lvl <= 5; lvl++) {
-    for (const u of usersByLevel[lvl]) {
+  // Pick up any remaining unvisited users strictly at or below caller's role level
+  for (let lvl = callerLevel; lvl <= 5; lvl++) {
+    for (const u of (usersByLevel[lvl] || [])) {
       if (!visited.has(u.id)) {
         rootNodes.push(createNode(u));
       }
