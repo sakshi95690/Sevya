@@ -318,7 +318,7 @@ export const ProofReviewView: React.FC<ProofReviewViewProps> = ({
             const res = await api.getProofDownloadUrl(task.id, proof.id);
             resolvedUrl = res.url;
           } catch {
-            resolvedUrl = proof.url || '/logo.jpeg';
+            resolvedUrl = proof.url || '/logo.png';
           }
         }
       }
@@ -903,11 +903,11 @@ export const ProofReviewView: React.FC<ProofReviewViewProps> = ({
                   >
                     {proof.url && (proof.mimeType?.startsWith('image/') || proof.type === 'image' || !proof.mimeType) ? (
                       <img
-                        src={proof.url || '/logo.jpeg'}
+                        src={proof.url || '/logo.png'}
                         alt={proof.fileName || task.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/logo.jpeg';
+                          (e.target as HTMLImageElement).src = '/logo.png';
                         }}
                       />
                     ) : (
@@ -1101,11 +1101,11 @@ export const ProofReviewView: React.FC<ProofReviewViewProps> = ({
                         >
                           {proof.url && (proof.mimeType?.startsWith('image/') || proof.type === 'image' || !proof.mimeType) ? (
                             <img
-                              src={proof.url || '/logo.jpeg'}
+                              src={proof.url || '/logo.png'}
                               alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/logo.jpeg';
+                                (e.target as HTMLImageElement).src = '/logo.png';
                               }}
                             />
                           ) : (
@@ -1379,11 +1379,11 @@ export const ProofReviewView: React.FC<ProofReviewViewProps> = ({
             <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-slate-950 min-h-[300px]">
               {previewMedia.type === 'image' ? (
                 <img
-                  src={previewMedia.url || '/logo.jpeg'}
+                  src={previewMedia.url || '/logo.png'}
                   alt={previewMedia.title}
                   className="max-h-[68vh] max-w-full object-contain rounded-lg"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/logo.jpeg';
+                    (e.target as HTMLImageElement).src = '/logo.png';
                   }}
                 />
               ) : previewMedia.type === 'audio' ? (
