@@ -194,20 +194,22 @@ export const BookSevaView: React.FC<BookSevaViewProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Header Banner */}
-      <div className="bg-amber-900/90 text-amber-100 p-4 sm:p-6 rounded-2xl shadow-xs border border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
-            <Landmark className="w-5 h-5 sm:w-7 sm:h-7 text-amber-400" />
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <Landmark className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              Book Temple Seva
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">
-                Live
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Book Temple Seva
+              </h2>
+              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                Opportunities
               </span>
-            </h2>
-            <p className="text-xs text-amber-200 mt-0.5">
-              Select devotional Sevas, reserve shifts, and earn Seva Points for temple contributions.
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Select devotional Sevas, reserve shifts, and earn Seva Points for temple contributions
             </p>
           </div>
         </div>
@@ -219,18 +221,19 @@ export const BookSevaView: React.FC<BookSevaViewProps> = ({
                 setShowCreateModal(true);
                 setModalError(null);
               }}
-              className="py-2 px-3.5 sm:px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="py-2 px-3.5 sm:px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
-              <Plus className="w-4 h-4" /> Create Seva
+              <Plus className="w-4 h-4" />
+              <span>Create Seva</span>
             </button>
           )}
 
           <button
             onClick={fetchOpportunities}
-            className="p-2 bg-amber-800/80 hover:bg-amber-800 text-amber-200 rounded-xl border border-amber-700 transition-colors cursor-pointer shrink-0"
+            className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors cursor-pointer shrink-0"
             title="Refresh Seva Data"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
