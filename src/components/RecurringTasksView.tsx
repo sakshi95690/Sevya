@@ -227,42 +227,43 @@ export const RecurringTasksView: React.FC<RecurringTasksViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 p-6 sm:p-8 rounded-3xl text-white shadow-md relative overflow-hidden border border-amber-700/50">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <RotateCcw className="w-48 h-48 text-amber-200" />
-        </div>
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <RotateCcw className="w-5 h-5" />
+          </div>
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-widest mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Automated Recurring Task Engine
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Recurring Seva Templates
+              </h1>
+              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                Scheduler
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Daily & Recurring Seva Templates
-            </h1>
-            <p className="text-xs sm:text-sm text-amber-100/80 mt-2 max-w-2xl leading-relaxed">
-              Create a recurring task template once (e.g. <span className="font-bold text-amber-300">"Temple Hall Cleaning"</span>).
-              Our backend scheduler automatically generates clean daily task instances for assigned Sevaits with zero manual repetitive work.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Automated recurring task instances for scheduled temple sevas
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={handleGenerateTodayTasks}
-              disabled={isGenerating}
-              className="py-3 px-5 bg-slate-800/90 hover:bg-slate-800 text-amber-300 hover:text-amber-200 font-bold text-xs rounded-2xl border border-amber-500/40 shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin text-amber-400' : ''}`} />
-              {isGenerating ? 'Running Scheduler...' : "Generate Today's Instances"}
-            </button>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          <button
+            onClick={handleGenerateTodayTasks}
+            disabled={isGenerating}
+            className="py-2 px-3 sm:px-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin text-amber-600' : ''}`} />
+            <span>{isGenerating ? 'Running...' : "Generate Today's Instances"}</span>
+          </button>
 
-            <button
-              onClick={openCreateModal}
-              className="py-3 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-2xl shadow-md transition-all flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" /> Create Recurring Template
-            </button>
-          </div>
+          <button
+            onClick={openCreateModal}
+            className="py-2 px-3.5 sm:px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Template</span>
+          </button>
         </div>
       </div>
 
