@@ -110,6 +110,8 @@ export const api = {
     request<Meeting>('/v1/meetings/zoom', { method: 'POST', body: JSON.stringify(data) }),
   createGoogleMeetMeeting: (data: any) =>
     request<Meeting>('/v1/meetings/google-meet', { method: 'POST', body: JSON.stringify(data) }),
+  startMeeting: (id: string) =>
+    request<{ canStart: boolean; isHost: boolean; startUrl?: string; joinUrl?: string; message?: string }>(`/v1/meetings/${id}/start`, { method: 'POST' }),
   endMeeting: (id: string) =>
     request<Meeting>(`/v1/meetings/${id}/end`, { method: 'POST' }),
   executeMeetingHostAction: (id: string, action: string, payload?: any) =>
