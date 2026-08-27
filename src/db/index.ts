@@ -272,6 +272,9 @@ const initializePgliteSchema = async (pglite: PGlite) => {
       description TEXT DEFAULT '',
       summary TEXT DEFAULT '',
       organizer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      host_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      zoom_host_id TEXT DEFAULT '',
+      zoom_host_email TEXT DEFAULT '',
       department_id TEXT DEFAULT '',
       project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
       agenda TEXT DEFAULT '',
@@ -791,9 +794,15 @@ const initializePgliteSchema = async (pglite: PGlite) => {
     );`,
 
     `CREATE UNIQUE INDEX IF NOT EXISTS user_integrations_user_provider_idx ON user_integrations (user_id, provider);`,
+    `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS host_id UUID REFERENCES users(id) ON DELETE SET NULL;`,
+    `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS zoom_host_id TEXT DEFAULT '';`,
+    `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS zoom_host_email TEXT DEFAULT '';`,
     `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS is_google_meet BOOLEAN DEFAULT false;`,
     `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS google_meet_url TEXT DEFAULT '';`,
     `ALTER TABLE meetings ADD COLUMN IF NOT EXISTS meeting_platform TEXT DEFAULT 'standard';`,
+    `UPDATE meetings SET host_id = COALESCE(organizer_id, created_by) WHERE host_id IS NULL;`,
+    `UPDATE meetings SET organizer_id = COALESCE(host_id, created_by) WHERE organizer_id IS NULL;`,
+    `UPDATE meetings SET created_by = COALESCE(host_id, organizer_id) WHERE created_by IS NULL;`,
 
     `CREATE TABLE IF NOT EXISTS calendar_events (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
