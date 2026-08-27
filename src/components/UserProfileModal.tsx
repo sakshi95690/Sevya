@@ -43,6 +43,7 @@ import {
   canSeeUser,
   canManageUser,
   canAssignRole,
+  getAllowedAssignableRoles,
   getRoleDisplayName,
   normalizeRole,
 } from '../utils/roleHierarchy';
@@ -373,34 +374,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const allowedRolesForCurrentAdmin: { value: UserRole; label: string }[] = (() => {
     if (!authUser) return [];
-    if (authUser.role === 'super_admin') {
-      return [
-        { value: 'super_admin', label: 'Super Admin' },
-        { value: 'temple_admin', label: 'Temple Admin' },
-        { value: 'department_head', label: 'Department Head' },
-        { value: 'coordinator', label: 'Coordinator' },
-        { value: 'member', label: 'Member' },
-      ];
-    }
-    if (authUser.role === 'temple_admin') {
-      return [
-        { value: 'department_head', label: 'Department Head' },
-        { value: 'coordinator', label: 'Coordinator' },
-        { value: 'member', label: 'Member' },
-      ];
-    }
-    if (authUser.role === 'department_head') {
-      return [
-        { value: 'coordinator', label: 'Coordinator' },
-        { value: 'member', label: 'Member' },
-      ];
-    }
-    if (authUser.role === 'coordinator') {
-      return [
-        { value: 'member', label: 'Member' },
-      ];
-    }
-    return [];
+    const roles = getAllowedAssignableRoles(authUser.role);
+    return roles.map((r) => ({
+      value: r,
+      label: getRoleDisplayName(r),
+    }));
   })();
 
   const taskList: any[] = dossier?.tasks || [];
