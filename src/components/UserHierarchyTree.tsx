@@ -245,33 +245,37 @@ function buildOrganizationalTree(
       }
     }
   } else if (callerLevel === 2) {
-    // Temple Admin sees Department Heads (and any unparented coordinators under them)
-    const topDeptHeads = [
-      ...usersByLevel[3].filter((dh) => !dh.parentId || dh.parentId === currentUser.id || !userMap.has(dh.parentId)),
-      ...usersByLevel[4].filter((co) => (!co.parentId || co.parentId === currentUser.id) && !usersByLevel[3].some((dh) => dh.id === co.parentId)),
-    ];
-
-    for (const u of topDeptHeads) {
-      if (!visited.has(u.id)) {
-        rootNodes.push(createNode(u));
+    // Temple Admin sees Temple Admins at top, with Dept Heads nested below
+    for (const ta of usersByLevel[2]) {
+      if (!visited.has(ta.id)) {
+        rootNodes.push(createNode(ta));
+      }
+    }
+    for (const dh of usersByLevel[3]) {
+      if (!visited.has(dh.id)) {
+        rootNodes.push(createNode(dh));
       }
     }
   } else if (callerLevel === 3) {
-    // Department Head sees Coordinators reporting to them or in their department
-    const topCoords = usersByLevel[4].filter(
-      (co) => !co.parentId || co.parentId === currentUser.id || !userMap.has(co.parentId)
-    );
-    for (const co of topCoords) {
+    // Department Head sees Dept Heads at top, with Coordinators nested below
+    for (const dh of usersByLevel[3]) {
+      if (!visited.has(dh.id)) {
+        rootNodes.push(createNode(dh));
+      }
+    }
+    for (const co of usersByLevel[4]) {
       if (!visited.has(co.id)) {
         rootNodes.push(createNode(co));
       }
     }
   } else if (callerLevel === 4) {
-    // Coordinator sees Members reporting to them
-    const topMembers = usersByLevel[5].filter(
-      (m) => !m.parentId || m.parentId === currentUser.id || !userMap.has(m.parentId)
-    );
-    for (const m of topMembers) {
+    // Coordinator sees Coordinators at top, with Members nested below
+    for (const co of usersByLevel[4]) {
+      if (!visited.has(co.id)) {
+        rootNodes.push(createNode(co));
+      }
+    }
+    for (const m of usersByLevel[5]) {
       if (!visited.has(m.id)) {
         rootNodes.push(createNode(m));
       }
