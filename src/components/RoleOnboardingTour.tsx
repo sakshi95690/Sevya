@@ -111,7 +111,7 @@ export const RoleOnboardingTour: React.FC<RoleOnboardingTourProps> = ({
             targetSelector: '[data-tour="nav-users"]',
             fallbackSelector: '[data-tour="nav-dashboard"]',
             title: 'User & Role Administration',
-            subtitle: 'RBAC Hierarchy Control',
+            subtitle: 'User Roles & Permissions',
             description:
               'Provision and oversee temple administrators, trustees, department heads, and coordinators with granular permissions and hierarchical security.',
             icon: <Users className="w-5 h-5 text-blue-500" />,
