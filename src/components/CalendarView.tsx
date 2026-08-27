@@ -59,7 +59,7 @@ export const getLocalDateString = (d: Date = new Date()): string => {
  * Parses YYYY-MM-DD or ISO string into a local Date at midnight local time
  */
 export const parseLocalDateString = (dateStr: string): Date => {
-  if (!dateStr) return new Date();
+  if (!dateStr || typeof dateStr !== 'string') return new Date();
   const cleanStr = dateStr.split('T')[0];
   const parts = cleanStr.split('-').map(Number);
   if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
@@ -403,9 +403,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     setFormTitle(event.title);
     setFormDescription(event.description || '');
     setFormEventType(event.eventType);
-    setFormStartDate(event.startDate ? event.startDate.split('T')[0] : getLocalDateString(new Date()));
+    setFormStartDate(event.startDate && typeof event.startDate === 'string' ? event.startDate.split('T')[0] : getLocalDateString(new Date()));
     setFormStartTime(event.startTime || '09:00');
-    setFormEndDate(event.endDate ? event.endDate.split('T')[0] : event.startDate?.split('T')[0] || getLocalDateString(new Date()));
+    setFormEndDate(
+      event.endDate && typeof event.endDate === 'string'
+        ? event.endDate.split('T')[0]
+        : (event.startDate && typeof event.startDate === 'string' ? event.startDate.split('T')[0] : getLocalDateString(new Date()))
+    );
     setFormEndTime(event.endTime || '10:00');
     setFormIsAllDay(!!event.isAllDay);
     setFormLocation(event.location || '');
@@ -478,7 +482,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         startDate: rescheduleStartDate,
         startTime: rescheduleStartTime || selectedEvent.startTime,
         endDate: rescheduleStartDate,
-        endTime: rescheduleStartTime
+        endTime: rescheduleStartTime && typeof rescheduleStartTime === 'string' && rescheduleStartTime.includes(':')
           ? `${(parseInt(rescheduleStartTime.split(':')[0], 10) + 1).toString().padStart(2, '0')}:00`
           : selectedEvent.endTime,
       });
@@ -605,7 +609,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
     for (const evt of events) {
-      const sDate = evt.startDate ? evt.startDate.split('T')[0] : '';
+      const sDate = evt.startDate && typeof evt.startDate === 'string' ? evt.startDate.split('T')[0] : '';
       if (sDate) {
         if (!map[sDate]) map[sDate] = [];
         map[sDate].push(evt);
@@ -1978,7 +1982,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setRescheduleStartDate(selectedEvent.startDate?.split('T')[0] || getLocalDateString(new Date()));
+                    setRescheduleStartDate(
+                      selectedEvent.startDate && typeof selectedEvent.startDate === 'string'
+                        ? selectedEvent.startDate.split('T')[0]
+                        : getLocalDateString(new Date())
+                    );
                     setRescheduleStartTime(selectedEvent.startTime || '09:00');
                     setIsRescheduling(!isRescheduling);
                   }}
