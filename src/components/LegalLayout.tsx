@@ -116,7 +116,17 @@ export const LegalLayout: React.FC<LegalLayoutProps> = ({
       {/* Footer */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 px-4 sm:px-8 mt-auto">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <p>© {new Date().getFullYear()} SEVYA. Temple & Seva Project Management. All rights reserved.</p>
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.jpeg"
+              alt="SEVYA"
+              className="w-4 h-4 object-contain rounded-xs"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logo.png';
+              }}
+            />
+            <p>© {new Date().getFullYear()} SEVYA. Temple & Seva Project Management. All rights reserved.</p>
+          </div>
           <div className="flex items-center gap-6">
             <button
               onClick={() => onNavigate('/privacy-policy')}
