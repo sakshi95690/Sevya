@@ -143,6 +143,10 @@ export interface Meeting {
   projectId?: string;
   departmentId?: string;
   organizerId?: string;
+  hostId?: string;
+  zoomHostId?: string;
+  zoomHostEmail?: string;
+  createdBy?: string | any;
   date: string;
   time?: string;
   durationMinutes?: number;
@@ -159,6 +163,7 @@ export interface Meeting {
   googleMeetUrl?: string;
   meetingPlatform?: 'standard' | 'zoom' | 'google_meet';
   attendance?: MeetingAttendance[];
+  participants?: any[];
   actionPointTaskIds?: string[];
   createdAt?: string;
 }
