@@ -21,6 +21,8 @@ import {
 } from '../db/schema.ts';
 import { eq, and, or, sql, inArray, gte, lte, desc } from 'drizzle-orm';
 import { sendWebPushNotification } from './webPushService.ts';
+import { normalizeRole, getRequiredParentRole } from '../utils/roleHierarchy.ts';
+import { isValidUuid } from '../middleware/auth.ts';
 
 // Strongly Typed Event Names
 export type WorkflowEventType =
@@ -795,25 +797,115 @@ async function executeBuiltInEventHandler(eventRecord: any, params: EmitEventPar
 export async function createApprovalRequest(params: {
   templeId: string;
   requesterId: string;
-  approvalType: 'leave' | 'expense' | 'seva' | 'task' | 'department' | 'user_role' | 'announcement' | 'donation';
+  approvalType: 'leave' | 'expense' | 'seva' | 'task' | 'department' | 'user_role' | 'announcement' | 'donation' | string;
   title: string;
   description?: string;
   entityType?: string;
   entityId?: string;
   amount?: number;
+  parentUserId?: string;
+  approverUserId?: string;
+  approverRoleId?: string;
   levels?: Array<{ approverRoleId?: string; approverUserId?: string }>;
   metadata?: Record<string, any>;
 }) {
-  const { templeId, requesterId, approvalType, title, description = '', entityType = '', entityId = '', amount = 0, levels, metadata = {} } = params;
+  const {
+    templeId,
+    requesterId,
+    approvalType,
+    title,
+    description = '',
+    entityType = '',
+    entityId = '',
+    amount = 0,
+    parentUserId,
+    approverUserId,
+    approverRoleId,
+    levels,
+    metadata = {}
+  } = params;
+
+  // 1. Fetch Requester details from DB
+  const [requester] = await db.select().from(users).where(eq(users.id, requesterId)).limit(1);
+  const requesterRole = requester?.role ? normalizeRole(requester.role) : 'member';
+  const requesterName = requester?.name || requester?.displayName || 'Devotee';
+
+  // 2. Resolve Direct Parent Approver
+  let targetParentUserId = parentUserId || approverUserId || requester?.parentId || undefined;
+  let targetParentUser: any = null;
+
+  if (targetParentUserId && isValidUuid(targetParentUserId)) {
+    const parentCheck = await db.select().from(users).where(eq(users.id, targetParentUserId)).limit(1);
+    if (parentCheck.length > 0) {
+      targetParentUser = parentCheck[0];
+    }
+  }
+
+  // If requester didn't have parentId set in DB, but a valid parent was specified, save it for future requests
+  if (targetParentUser && requester && !requester.parentId) {
+    await db.update(users).set({ parentId: targetParentUser.id, updatedAt: new Date() }).where(eq(users.id, requester.id)).catch(() => {});
+  }
+
+  // If no parent found yet, find candidates matching required parent role for the user's role in the temple
+  if (!targetParentUser && requester) {
+    const reqParentRole = getRequiredParentRole(requesterRole);
+    if (reqParentRole) {
+      const candidates = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.templeId, templeId),
+            eq(users.role, reqParentRole)
+          )
+        )
+        .limit(1);
+      if (candidates.length > 0) {
+        targetParentUser = candidates[0];
+        targetParentUserId = targetParentUser.id;
+        if (!requester.parentId) {
+          await db.update(users).set({ parentId: targetParentUser.id, updatedAt: new Date() }).where(eq(users.id, requester.id)).catch(() => {});
+        }
+      }
+    }
+  }
+
+  // If still no parent found (e.g. top administrator or single-user tenant), fallback to temple_admin or super_admin
+  if (!targetParentUser) {
+    const adminCandidates = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.templeId, templeId), or(eq(users.role, 'temple_admin'), eq(users.role, 'super_admin'))))
+      .limit(1);
+    if (adminCandidates.length > 0) {
+      targetParentUser = adminCandidates[0];
+      targetParentUserId = targetParentUser.id;
+    }
+  }
+
+  const finalApproverUserId = targetParentUser ? targetParentUser.id : (approverUserId || undefined);
+  const finalApproverRole = targetParentUser ? normalizeRole(targetParentUser.role) : (approverRoleId || (requesterRole === 'super_admin' ? 'super_admin' : 'temple_admin'));
+  const parentName = targetParentUser ? (targetParentUser.name || targetParentUser.displayName || 'Parent Supervisor') : '';
 
   let approvalLevels = levels || [];
   if (approvalLevels.length === 0) {
-    // Default 2-level hierarchy: Temple Admin -> Super Admin
+    // Single-Level Parent Approval
     approvalLevels = [
-      { approverRoleId: 'temple_admin' },
-      { approverRoleId: 'super_admin' },
+      {
+        approverRoleId: finalApproverRole,
+        approverUserId: finalApproverUserId,
+      }
     ];
   }
+
+  const enrichedMetadata = {
+    ...metadata,
+    parentUserId: finalApproverUserId,
+    parentName,
+    parentRole: finalApproverRole,
+    requesterName,
+    requesterRole,
+  };
 
   const [request] = await db
     .insert(approvalRequests)
@@ -829,7 +921,7 @@ export async function createApprovalRequest(params: {
       currentLevel: 1,
       totalLevels: approvalLevels.length,
       status: 'PENDING',
-      metadataJson: metadata,
+      metadataJson: enrichedMetadata,
     })
     .returning();
 
@@ -839,23 +931,23 @@ export async function createApprovalRequest(params: {
     await db.insert(approvalSteps).values({
       approvalRequestId: request.id,
       level: idx + 1,
-      approverRoleId: lvl.approverRoleId || '',
-      approverUserId: lvl.approverUserId || undefined,
-      status: idx === 0 ? 'PENDING' : 'PENDING',
+      approverRoleId: lvl.approverRoleId || finalApproverRole,
+      approverUserId: lvl.approverUserId || finalApproverUserId || undefined,
+      status: 'PENDING',
     });
   }
 
-  // Fetch approver user if role specified
-  let approverUserId: string | undefined = approvalLevels[0].approverUserId;
-  if (!approverUserId && approvalLevels[0].approverRoleId) {
-    const approverCandidates = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.templeId, templeId), eq(users.role, approvalLevels[0].approverRoleId)))
-      .limit(1);
-    if (approverCandidates.length > 0) {
-      approverUserId = approverCandidates[0].id;
-    }
+  // Create in-app notification for the parent / approver
+  if (finalApproverUserId) {
+    await db.insert(notifications).values({
+      templeId,
+      recipientUserId: finalApproverUserId,
+      type: 'approval_request',
+      title: `Approval Request from ${requesterName}`,
+      message: `${requesterName} submitted a ${approvalType} request: "${title}". Please review and authorize.`,
+      linkId: request.id,
+      read: false,
+    }).catch((err) => console.warn('Failed to insert parent notification:', err));
   }
 
   // Emit event
@@ -864,11 +956,26 @@ export async function createApprovalRequest(params: {
     eventType: 'APPROVAL_SUBMITTED',
     entityType: 'approval',
     entityId: request.id,
-    payload: { requesterId, approverUserId, title, approvalType, amount },
+    payload: {
+      requesterId,
+      requesterName,
+      approverUserId: finalApproverUserId,
+      approverName: parentName,
+      title,
+      approvalType,
+      amount,
+    },
     actorUserId: requesterId,
   });
 
-  return request;
+  return {
+    ...request,
+    requesterName,
+    requesterRole,
+    parentName,
+    parentRole: finalApproverRole,
+    parentUserId: finalApproverUserId,
+  };
 }
 
 /**
