@@ -917,7 +917,7 @@ export async function createApprovalRequest(params: {
       description,
       entityType,
       entityId,
-      amount,
+      amount: Math.round(Number(amount) || 0),
       currentLevel: 1,
       totalLevels: approvalLevels.length,
       status: 'PENDING',
