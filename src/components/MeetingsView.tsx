@@ -135,7 +135,9 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
   const isHostUser = (mtg: Meeting) => {
     if (isVolunteer) return false;
     if (normalizedRole === 'super_admin' || normalizedRole === 'temple_admin') return true;
+    if (mtg.hostId && mtg.hostId === currentUser.id) return true;
     if (mtg.organizerId === currentUser.id) return true;
+    if (mtg.createdBy && (typeof mtg.createdBy === 'string' ? mtg.createdBy === currentUser.id : mtg.createdBy?.id === currentUser.id)) return true;
     return false;
   };
 
@@ -145,8 +147,11 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
   // Role based visibility filter
   const visibleMeetings = meetings.filter((mtg) => {
     if (normalizedRole === 'super_admin') return true;
+    if (mtg.hostId === currentUser.id) return true;
     if (mtg.organizerId === currentUser.id) return true;
+    if (mtg.createdBy && (typeof mtg.createdBy === 'string' ? mtg.createdBy === currentUser.id : mtg.createdBy?.id === currentUser.id)) return true;
     if (mtg.participants && mtg.participants.includes(currentUser.id)) return true;
+    if (mtg.attendance && mtg.attendance.some((a) => a.userId === currentUser.id)) return true;
     if ((mtg as any).targetRoles && Array.isArray((mtg as any).targetRoles) && (mtg as any).targetRoles.includes(normalizedRole)) return true;
     if (mtg.departmentId && currentUser.departmentId === mtg.departmentId) return true;
     if (isVolunteer && !(mtg as any).isPublicDevoteeMeeting) {
@@ -276,6 +281,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
         projectId: projectId || undefined,
         departmentId: departmentId || undefined,
         organizerId: currentUser.id,
+        hostId: currentUser.id,
         date,
         location,
         agenda,
@@ -316,10 +322,23 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
     setTimeout(() => setCopiedJoinId(null), 2500);
   };
 
-  const handleStartMeetingAsHost = (mtg: Meeting) => {
-    const startUrl = mtg.zoomHostUrl || mtg.zoomJoinUrl || 'https://zoom.us';
-    window.open(startUrl, '_blank');
-    setHostControlMeeting(mtg);
+  const handleStartMeetingAsHost = async (mtg: Meeting) => {
+    try {
+      const res = await api.startMeeting(mtg.id);
+      if (res.canStart && res.startUrl) {
+        window.open(res.startUrl, '_blank');
+        setHostControlMeeting(mtg);
+      } else {
+        alert(res.message || 'You cannot start the meeting because it is hosted by another user.');
+        if (res.joinUrl) {
+          window.open(res.joinUrl, '_blank');
+        }
+      }
+    } catch (err: any) {
+      const fallbackUrl = mtg.zoomHostUrl || mtg.zoomJoinUrl || mtg.googleMeetUrl || 'https://zoom.us';
+      window.open(fallbackUrl, '_blank');
+      setHostControlMeeting(mtg);
+    }
   };
 
   const handleEndMeeting = async (mtg: Meeting) => {
@@ -527,7 +546,8 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
           </div>
         ) : (
           visibleMeetings.map((mtg) => {
-            const organizer = users.find((u) => u.id === mtg.organizerId);
+            const hostUserId = mtg.hostId || mtg.organizerId || (typeof mtg.createdBy === 'string' ? mtg.createdBy : mtg.createdBy?.id);
+            const organizer = users.find((u) => u.id === hostUserId);
             const actionTaskIds = mtg.actionPointTaskIds || [];
             const linkedTaskList = tasks.filter((t) => actionTaskIds.includes(t.id));
             const locationStr = mtg.location || '';
