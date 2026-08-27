@@ -22,6 +22,7 @@ import {
   Info,
   Check,
   ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 import {
   fetchApprovalRequests,
@@ -33,7 +34,26 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../services/api';
 import { User as UserType, UserRole } from '../types';
-import { normalizeRole, getRequiredParentRole } from '../utils/roleHierarchy';
+import { normalizeRole } from '../utils/roleHierarchy';
+
+function formatRoleLabel(role?: string): string {
+  if (!role) return '';
+  const r = normalizeRole(role);
+  switch (r) {
+    case 'super_admin':
+      return 'Super Admin';
+    case 'temple_admin':
+      return 'Temple Admin';
+    case 'department_head':
+      return 'Department Head';
+    case 'coordinator':
+      return 'Coordinator';
+    case 'member':
+      return 'Member / Sevak';
+    default:
+      return String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
 
 export const ApprovalsView: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -150,26 +170,6 @@ export const ApprovalsView: React.FC = () => {
     }
   }, [showSubmitModal, currentUser]);
 
-  // Selected parent user object from parentCandidates or currentUser.parentName
-  const assignedParentUser = useMemo(() => {
-    if (!currentUser) return null;
-    if (selectedParentId) {
-      const found = parentCandidates.find((p) => p.id === selectedParentId);
-      if (found) return found;
-    }
-    if (currentUser.parentId) {
-      const found = parentCandidates.find((p) => p.id === currentUser.parentId);
-      if (found) return found;
-      return {
-        id: currentUser.parentId,
-        name: currentUser.parentName || 'Assigned Parent',
-        role: (currentUser.parentRole as UserRole) || 'temple_admin',
-        email: '',
-      } as Partial<UserType>;
-    }
-    return parentCandidates[0] || null;
-  }, [selectedParentId, parentCandidates, currentUser]);
-
   const handleProcessAction = async (action: 'APPROVE' | 'REJECT') => {
     if (!selectedRequest) return;
     setActionProcessing(true);
@@ -199,7 +199,7 @@ export const ApprovalsView: React.FC = () => {
 
     const finalParentId = selectedParentId || currentUser?.parentId;
     if (!finalParentId && parentCandidates.length === 0 && currentUser?.role !== 'super_admin') {
-      showError('Please select a parent guardian to send this approval to.');
+      showError('Please select a parent supervisor to send this approval to.');
       return;
     }
 
@@ -215,7 +215,7 @@ export const ApprovalsView: React.FC = () => {
         templeId: currentUser?.templeId,
       });
 
-      showSuccess('Approval request submitted to your parent supervisor successfully!');
+      showSuccess('Approval request submitted successfully!');
       setShowSubmitModal(false);
       setTitle('');
       setDescription('');
@@ -286,21 +286,15 @@ export const ApprovalsView: React.FC = () => {
       {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
         <div className="flex items-start sm:items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-2xs">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-2xs">
             <FileCheck className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Approvals & Requests
-              </h1>
-              <span className="text-[11px] font-bold bg-amber-100/70 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-amber-600" />
-                Parent Hierarchy Routing
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              End-to-end role-based approval requests routed directly to your designated Parent / Guardian supervisor.
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Approvals & Requests
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Submit requests to your supervisor, track progress, and review pending authorizations.
             </p>
           </div>
         </div>
@@ -312,14 +306,14 @@ export const ApprovalsView: React.FC = () => {
             className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>New Approval Request</span>
+            <span>New Request</span>
           </button>
         </div>
       </div>
 
-      {/* Role & Parent Indicator Card */}
+      {/* Role & Supervisor Summary Card */}
       {currentUser && (
-        <div className="bg-linear-to-r from-emerald-50 to-teal-50 dark:from-slate-800/60 dark:to-slate-800/40 border border-emerald-200/80 dark:border-slate-700 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0">
               {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
@@ -328,24 +322,24 @@ export const ApprovalsView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900 dark:text-slate-100">{currentUser.name}</span>
                 <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-semibold rounded-md uppercase text-[10px]">
-                  {currentUser.role}
+                  {formatRoleLabel(currentUser.role)}
                 </span>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 mt-0.5">
-                Reporting in temple hierarchy with direct parent routing.
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">
+                Logged in as active user
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3.5 py-2 rounded-xl border border-emerald-100 dark:border-slate-700 self-start md:self-auto shadow-2xs">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 self-start md:self-auto shadow-2xs">
             <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Your Parent Guardian:</span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Supervisor / Parent:</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">
-              {currentUser.parentName || assignedParentUser?.name || 'Temple Administrator'}
+              {currentUser.parentName || 'Temple Administrator'}
             </span>
             {currentUser.parentRole && (
               <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-semibold uppercase">
-                {currentUser.parentRole}
+                {formatRoleLabel(currentUser.parentRole)}
               </span>
             )}
           </div>
@@ -411,7 +405,7 @@ export const ApprovalsView: React.FC = () => {
             disabled={loading}
             className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 py-1 px-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1.5 self-end sm:self-center cursor-pointer"
           >
-            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             <span>Refresh</span>
           </button>
         </div>
@@ -420,7 +414,7 @@ export const ApprovalsView: React.FC = () => {
         {activeTab === 'pending' && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" /> Scope:
+              <Filter className="w-3.5 h-3.5" /> Filter:
             </span>
             <button
               onClick={() => setPendingFilter('all')}
@@ -442,7 +436,7 @@ export const ApprovalsView: React.FC = () => {
               }`}
             >
               <UserCheck className="w-3.5 h-3.5" />
-              <span>Needs My Review as Parent ({needsMyReviewCount})</span>
+              <span>Needs My Review ({needsMyReviewCount})</span>
             </button>
 
             <button
@@ -454,7 +448,7 @@ export const ApprovalsView: React.FC = () => {
               }`}
             >
               <Send className="w-3.5 h-3.5" />
-              <span>My Requests to Parent ({myRequestsPendingCount})</span>
+              <span>My Requests ({myRequestsPendingCount})</span>
             </button>
           </div>
         )}
@@ -465,7 +459,7 @@ export const ApprovalsView: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by title, requester, parent, or notes..."
+              placeholder="Search by title, requester, supervisor, or details..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
@@ -478,11 +472,11 @@ export const ApprovalsView: React.FC = () => {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             >
-              <option value="all">All Approval Types</option>
+              <option value="all">All Request Types</option>
               <option value="leave">Leave Requests</option>
-              <option value="expense">Expense Claims</option>
+              <option value="expense">Expense Reimbursements</option>
               <option value="seva">Seva Approvals</option>
-              <option value="task">Task Waivers</option>
+              <option value="task">Task Authorizations</option>
               <option value="announcement">Announcement Broadcasts</option>
               <option value="user_role">Role Changes</option>
               <option value="general">General Requests</option>
@@ -496,7 +490,7 @@ export const ApprovalsView: React.FC = () => {
         <div className="py-20 text-center flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-3" />
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Loading approval requests and parent routes...
+            Loading approval requests...
           </p>
         </div>
       ) : filteredRequests.length === 0 ? (
@@ -505,7 +499,7 @@ export const ApprovalsView: React.FC = () => {
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No approval requests found</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
             {activeTab === 'pending'
-              ? 'No pending approval requests requiring parent action in this filter.'
+              ? 'No pending approval requests matching the selected filter.'
               : 'No historical approval requests match the current criteria.'}
           </p>
           <button
@@ -543,7 +537,7 @@ export const ApprovalsView: React.FC = () => {
                     {req.status === 'PENDING' && (
                       <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2.5 py-0.5 rounded-full text-xs font-bold">
                         <Clock className="w-3 h-3 text-amber-600" />
-                        Pending Parent Review
+                        Pending Review
                       </span>
                     )}
                     {req.status === 'APPROVED' && (
@@ -565,7 +559,7 @@ export const ApprovalsView: React.FC = () => {
                     {req.title}
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 line-clamp-2">
-                    {req.description || 'No additional justification notes provided.'}
+                    {req.description || 'No additional details provided.'}
                   </p>
 
                   {/* Amount Badge if applicable */}
@@ -576,24 +570,19 @@ export const ApprovalsView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Parent Routing Route Pill */}
-                  <div className="mt-3.5 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 text-[11px] space-y-1.5">
-                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                      <span className="font-semibold flex items-center gap-1">
-                        <Send className="w-3 h-3 text-slate-400" />
-                        Send Approval To:
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase bg-emerald-100/80 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
-                        Parent Guardian
-                      </span>
-                    </div>
+                  {/* Send Approval To Box */}
+                  <div className="mt-3.5 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 text-[11px] space-y-1">
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                      <Send className="w-3 h-3 text-slate-400" />
+                      Send Approval To:
+                    </span>
 
                     <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
                       <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">{req.parentName || 'Assigned Parent Supervisor'}</span>
+                      <span className="truncate">{req.parentName || 'Assigned Supervisor'}</span>
                       {req.parentRole && (
                         <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded font-semibold uppercase shrink-0">
-                          {req.parentRole}
+                          {formatRoleLabel(req.parentRole)}
                         </span>
                       )}
                     </div>
@@ -625,12 +614,12 @@ export const ApprovalsView: React.FC = () => {
                         className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                       >
                         <UserCheck className="w-3.5 h-3.5" />
-                        <span>Review & Endorse</span>
+                        <span>Review & Decide</span>
                       </button>
                     ) : (
                       <div className="w-full py-1.5 px-3 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 font-medium text-center flex items-center justify-center gap-1">
                         <Clock className="w-3 h-3" />
-                        <span>Awaiting Parent Review</span>
+                        <span>Awaiting Supervisor Review</span>
                       </div>
                     )
                   ) : (
@@ -639,7 +628,7 @@ export const ApprovalsView: React.FC = () => {
                       className="w-full py-1.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Info className="w-3.5 h-3.5" />
-                      <span>View Outcome Details</span>
+                      <span>View Details</span>
                     </button>
                   )}
                 </div>
@@ -657,7 +646,7 @@ export const ApprovalsView: React.FC = () => {
               <div className="min-w-0 pr-2">
                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  Parent Approval Endorsement
+                  Approval Request Details
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
                   {selectedRequest.title}
@@ -674,7 +663,7 @@ export const ApprovalsView: React.FC = () => {
             {/* Request Summary Card */}
             <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl space-y-2.5 text-xs border border-slate-200/70 dark:border-slate-700/60">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold">Approval Type:</span>
+                <span className="text-slate-500 dark:text-slate-400 font-semibold">Request Type:</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100 uppercase px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px]">
                   {selectedRequest.approvalType}
                 </span>
@@ -683,7 +672,7 @@ export const ApprovalsView: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 dark:text-slate-400 font-semibold">Requester:</span>
                 <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {selectedRequest.requesterName || 'Devotee'} {selectedRequest.requesterRole ? `(${selectedRequest.requesterRole})` : ''}
+                  {selectedRequest.requesterName || 'Devotee'} {selectedRequest.requesterRole ? `(${formatRoleLabel(selectedRequest.requesterRole)})` : ''}
                 </span>
               </div>
 
@@ -691,13 +680,13 @@ export const ApprovalsView: React.FC = () => {
                 <span className="text-slate-500 dark:text-slate-400 font-semibold">Send Approval To:</span>
                 <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                   <UserCheck className="w-3.5 h-3.5" />
-                  Parent: {selectedRequest.parentName || 'Designated Supervisor'}
+                  {selectedRequest.parentName || 'Designated Supervisor'}
                 </span>
               </div>
 
               {selectedRequest.amount > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Claim Amount:</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Amount:</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                     ₹{selectedRequest.amount.toLocaleString()}
                   </span>
@@ -705,9 +694,9 @@ export const ApprovalsView: React.FC = () => {
               )}
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold block mb-1">Justification:</span>
+                <span className="text-slate-500 dark:text-slate-400 font-semibold block mb-1">Details / Description:</span>
                 <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                  {selectedRequest.description || 'No additional justification notes provided.'}
+                  {selectedRequest.description || 'No additional details provided.'}
                 </p>
               </div>
 
@@ -728,7 +717,7 @@ export const ApprovalsView: React.FC = () => {
                       <XCircle className="w-4 h-4 text-rose-600" />
                     )}
                     <span>
-                      {selectedRequest.status === 'APPROVED' ? 'Approved by Parent Supervisor' : 'Rejected'}
+                      {selectedRequest.status === 'APPROVED' ? 'Approved' : 'Rejected'}
                     </span>
                   </div>
                 </div>
@@ -739,11 +728,11 @@ export const ApprovalsView: React.FC = () => {
             {selectedRequest.status === 'PENDING' && (
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Parent Approver Remarks / Feedback
+                  Remarks / Reason (Optional for approval, recommended for rejection)
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Add approval comments or feedback for the requester..."
+                  placeholder="Enter remarks, notes, or reason for decision..."
                   value={actionComment}
                   onChange={(e) => setActionComment(e.target.value)}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
@@ -781,7 +770,7 @@ export const ApprovalsView: React.FC = () => {
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    <span>Approve Request</span>
+                    <span>Approve</span>
                   </button>
                 </>
               )}
@@ -801,10 +790,10 @@ export const ApprovalsView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
-                    Submit Approval Request
+                    New Approval Request
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Routed directly to your assigned Parent Guardian in the temple
+                    Submit a request to your designated supervisor for review
                   </p>
                 </div>
               </div>
@@ -817,55 +806,36 @@ export const ApprovalsView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitNewRequest} className="space-y-4">
-              {/* Send Approval To: Parent Section */}
-              <div className="p-3.5 bg-emerald-50/70 dark:bg-slate-800/90 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Send Approval To: Parent</span>
-                  </label>
-                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-300/50">
-                    Direct Supervisor
-                  </span>
-                </div>
+              {/* Send Approval To: Select Parent Dropdown */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Send Approval To <span className="text-rose-500">*</span>
+                </label>
 
                 {loadingParents ? (
-                  <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                    <span>Finding your parent guardian in temple hierarchy...</span>
+                    <span>Loading supervisors...</span>
                   </div>
-                ) : parentCandidates.length > 0 ? (
+                ) : (
                   <div>
                     <select
                       id="select-parent-guardian"
                       value={selectedParentId}
                       onChange={(e) => setSelectedParentId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                     >
+                      <option value="">[ Select Parent ▼ ]</option>
                       {parentCandidates.map((parent) => (
                         <option key={parent.id} value={parent.id}>
-                          {parent.name || parent.displayName} ({parent.role ? parent.role.toUpperCase() : 'PARENT'})
+                          {parent.name || parent.displayName} ({formatRoleLabel(parent.role)})
+                          {parent.id === currentUser?.parentId ? ' - Assigned Supervisor' : ''}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
-                      <Info className="w-3 h-3 text-emerald-600 shrink-0" />
-                      Approval requests can only be sent to your assigned parent / guardian supervisor.
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                      Choose the supervisor authorized to approve this request.
                     </p>
-                  </div>
-                ) : (
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-emerald-100 dark:border-slate-700 flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 font-bold text-xs flex items-center justify-center">
-                      P
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                        {currentUser?.parentName || 'Temple Administrator'}
-                      </div>
-                      <div className="text-[10px] text-slate-500 uppercase">
-                        {currentUser?.parentRole || 'temple_admin'} (Default Parent)
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
@@ -873,21 +843,21 @@ export const ApprovalsView: React.FC = () => {
               {/* Approval Type */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Approval Type
+                  Request Type <span className="text-rose-500">*</span>
                 </label>
                 <select
                   id="select-approval-type"
                   value={approvalType}
                   onChange={(e) => setApprovalType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100 cursor-pointer"
                 >
-                  <option value="leave">Leave Request</option>
+                  <option value="leave">Leave / Absence Request</option>
                   <option value="expense">Expense Reimbursement / Claim</option>
-                  <option value="seva">Seva Special Approval</option>
-                  <option value="task">Task Completion / Waiver</option>
+                  <option value="seva">Seva Allocation / Duty Approval</option>
+                  <option value="task">Task Completion / Authorization</option>
                   <option value="announcement">Announcement Broadcast</option>
-                  <option value="user_role">User Role Change / Assignment</option>
-                  <option value="general">General Temple Request</option>
+                  <option value="user_role">User Role Assignment</option>
+                  <option value="general">General Request</option>
                 </select>
               </div>
 
@@ -900,7 +870,7 @@ export const ApprovalsView: React.FC = () => {
                   id="input-approval-title"
                   type="text"
                   required
-                  placeholder="e.g. Leave for Family Pilgrimage / Festival Audio Equipment"
+                  placeholder="e.g. Leave for Pilgrimage / Festival Audio Equipment Expense"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
@@ -910,23 +880,23 @@ export const ApprovalsView: React.FC = () => {
               {/* Description */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Detailed Justification & Notes
+                  Details & Justification
                 </label>
                 <textarea
                   id="input-approval-description"
                   rows={3}
-                  placeholder="Provide complete context and details for your parent to review and endorse..."
+                  placeholder="Provide context and notes for your supervisor to review..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              {/* Amount (if expense or seva) */}
-              {(approvalType === 'expense' || approvalType === 'seva') && (
+              {/* Amount (if expense or seva or general) */}
+              {(approvalType === 'expense' || approvalType === 'seva' || approvalType === 'general') && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Amount (₹)
+                    Amount (₹) {approvalType !== 'expense' && <span className="text-slate-400 font-normal">(Optional)</span>}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
@@ -965,12 +935,12 @@ export const ApprovalsView: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Submitting to Parent...</span>
+                      <span>Submitting...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5" />
-                      <span>Send Approval To Parent</span>
+                      <span>Submit Request</span>
                     </>
                   )}
                 </button>
@@ -982,3 +952,4 @@ export const ApprovalsView: React.FC = () => {
     </div>
   );
 };
+
