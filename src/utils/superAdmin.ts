@@ -1,5 +1,9 @@
 export function getConfiguredSuperAdminEmails(): string[] {
-  const configured = (process.env.SUPER_ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAILS || '').trim();
+  let envVal = '';
+  if (typeof process !== 'undefined' && process.env) {
+    envVal = process.env.SUPER_ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAILS || '';
+  }
+  const configured = (envVal || '').trim();
 
   if (!configured) {
     return [];
