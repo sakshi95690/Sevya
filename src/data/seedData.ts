@@ -22,7 +22,7 @@ export const INITIAL_TEMPLE: TempleInfo = {
   contactEmail: 'sevyagiridharidas@gmail.com',
   trusteesCount: 12,
   registeredNumber: 'TRUST/UP/VRN/2020/884',
-  logo: '/logo.jpeg',
+  logo: '/logo.png',
   banner: '/images/banner.png',
 };
 
