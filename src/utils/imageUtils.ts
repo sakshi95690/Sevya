@@ -2,7 +2,7 @@
  * SEVYA Public Asset & Image Utility
  * 
  * Allows developers to place any image file directly inside the frontend `public` directory
- * (e.g. `public/sevya-logo.png` or `public/badge.png`) and reference it directly as `/sevya-logo.png`.
+ * (e.g. `public/logo.jpeg` or `public/badge.png`) and reference it directly as `/logo.jpeg`.
  * 
  * Works seamlessly in both local development (Vite dev server) and production builds (Firebase Hosting).
  */
@@ -11,10 +11,10 @@
  * Resolves a public asset path ensuring proper leading slash and environment base URL.
  * 
  * Examples:
- *  - resolvePublicImage('sevya-logo.png') => '/sevya-logo.png'
- *  - resolvePublicImage('/sevya-logo.png') => '/sevya-logo.png'
+ *  - resolvePublicImage('logo.jpeg') => '/logo.jpeg'
+ *  - resolvePublicImage('/logo.jpeg') => '/logo.jpeg'
  */
-export function resolvePublicImage(path?: string | null, fallback: string = '/sevya-logo.png'): string {
+export function resolvePublicImage(path?: string | null, fallback: string = '/logo.jpeg'): string {
   if (!path || typeof path !== 'string' || path.trim() === '') {
     return fallback;
   }
@@ -44,8 +44,10 @@ export function resolvePublicImage(path?: string | null, fallback: string = '/se
  * Developers can replace these files directly in `/public` to automatically update brand assets.
  */
 export const PUBLIC_ASSETS = {
-  LOGO: '/sevya-logo.png',
+  LOGO: '/logo.jpeg',
+  LOGO_JPEG: '/logo.jpeg',
   LOGO_PNG: '/logo.png',
   LOGO_SVG: '/logo.svg',
+  SEVYA_LOGO: '/sevya-logo.png',
   BADGE: '/badge.png',
 } as const;
