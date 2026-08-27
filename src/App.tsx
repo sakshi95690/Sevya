@@ -40,6 +40,7 @@ import { SettingsView } from './components/SettingsView';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AnnouncementsView } from './components/AnnouncementsView';
 import { RecurringTasksView } from './components/RecurringTasksView';
+import { ProofReviewView } from './components/ProofReviewView';
 import { ProofModal } from './components/ProofModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { LogoutConfirmModal } from './components/LogoutConfirmModal';
@@ -1286,32 +1287,23 @@ export default function App() {
           )}
 
           {activeTab === 'proofs' && (
-            <div className="space-y-6">
-              <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-sm border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-8 h-8 text-amber-400" />
-                  <div>
-                    <h2 className="text-xl font-bold tracking-tight text-white">Work Proof Verification Desk</h2>
-                    <p className="text-xs text-slate-300 mt-1">
-                      Review submitted photo, audio, and document proofs from Facilitators and Volunteers before granting final completion status.
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-amber-500/20 border border-amber-500/40 px-4 py-2 rounded-xl text-amber-300 font-bold text-xs uppercase tracking-wider">
-                  {tasks.filter((t) => t.status === 'under_review').length} Awaiting Review
-                </div>
-              </div>
-              <TasksView
-                tasks={tasks}
-                departments={departments}
-                users={users}
-                projects={projects}
-                currentUser={currentUser}
-                onCreateTask={handleCreateTask}
-                onOpenProofModal={(t) => setProofTask(t)}
-                onDeleteTask={handleDeleteTask}
-              />
-            </div>
+            <ProofReviewView
+              tasks={tasks}
+              departments={departments}
+              users={users}
+              projects={projects}
+              currentUser={currentUser}
+              onRefreshTasks={async () => {
+                const refreshed = await api.getTasks();
+                if (Array.isArray(refreshed)) {
+                  setTasks(refreshed);
+                }
+              }}
+              onTaskUpdated={(updated) => {
+                setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+              }}
+              onOpenProofModal={(t) => setProofTask(t)}
+            />
           )}
 
           {activeTab === 'users' && (
