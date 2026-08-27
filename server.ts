@@ -1935,11 +1935,11 @@ app.get(['/api/v1/admin/users', '/api/users'], requireAuth, async (req: AuthRequ
     const allUsersSummary = await db.select({ id: users.id, name: users.name, role: users.role }).from(users);
     const userMap = new Map<string, { id: string; name: string; role: string }>(allUsersSummary.map((u) => [u.id, u]));
 
-    // Enforce role hierarchy: No user can see data of users above their rank in the hierarchy
+    // Enforce role hierarchy: No user can see data of users above their rank or outside their authorized branch
     const enrichedUsers = rawUsers
       .filter((u) => {
         if (u.id === currentUser.id) return true;
-        return canSeeUser(currentUser.role, u.role);
+        return canSeeUser(currentUser.role, u.role, currentUser.id, u.id);
       })
       .map((u) => {
         const parent = u.parentId ? userMap.get(u.parentId) : undefined;
@@ -2167,7 +2167,7 @@ app.get('/api/v1/admin/users/:id', requireAuth, async (req: AuthRequest, res: Re
   }
 
   // Hierarchy check
-  if (targetUser.id !== currentUser.id && !canSeeUser(currentUser.role, targetUser.role) && currentUser.role.toLowerCase() !== 'super_admin') {
+  if (targetUser.id !== currentUser.id && !canSeeUser(currentUser.role, targetUser.role, currentUser.id, targetUser.id) && currentUser.role.toLowerCase() !== 'super_admin') {
     return sendRfc7807Error(res, 403, 'Forbidden', 'Access Denied: You do not have permission to view higher hierarchy users.');
   }
 
@@ -2188,7 +2188,7 @@ app.get(['/api/v1/users/:id/operational-dossier', '/api/users/:id/operational-do
 
     const isSelf = currentUser.id === targetUser.id;
     const isSuperAdmin = isRootSuperAdmin(currentUser) || normalizeRole(currentUser.role) === 'super_admin';
-    const isVisible = isSelf || isSuperAdmin || canSeeUser(currentUser.role, targetUser.role);
+    const isVisible = isSelf || isSuperAdmin || canSeeUser(currentUser.role, targetUser.role, currentUser.id, targetUser.id);
 
     // Cross-tenant check for non-Super Admins:
     if (!isSuperAdmin && targetUser.templeId !== tenantId) {
