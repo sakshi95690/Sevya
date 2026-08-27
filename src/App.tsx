@@ -1408,11 +1408,11 @@ export default function App() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <img
-                src="/logo.jpeg"
+                src="/logo.png"
                 alt="SEVYA"
-                className="w-4 h-4 object-contain rounded-xs"
+                className="w-4 h-4 object-contain"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo.png';
+                  (e.target as HTMLImageElement).src = '/sevya-logo.png';
                 }}
               />
               <span className="font-bold text-slate-700 dark:text-slate-300">SEVYA</span>
