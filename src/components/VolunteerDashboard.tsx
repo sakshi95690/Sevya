@@ -107,52 +107,51 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10 animate-in fade-in duration-300">
-      {/* 1. Welcome Card - Clean, Warm, Personal */}
-      <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md border border-amber-400/30 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+      {/* 1. Welcome Card - Clean, Minimal SaaS Header */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-2xs border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 transition-colors">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           {currentUser.avatarUrl ? (
             <img
               src={currentUser.avatarUrl}
               alt={currentUser.name}
-              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-white/60 shadow-md bg-amber-800 shrink-0"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs bg-amber-50 shrink-0"
             />
           ) : (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-amber-800/80 border-2 border-white/60 flex items-center justify-center font-black text-lg sm:text-2xl uppercase shadow-md shrink-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-sm sm:text-base uppercase shadow-2xs shrink-0">
               {currentUser.name ? currentUser.name.slice(0, 2) : 'ME'}
             </div>
           )}
 
-          <div className="space-y-0.5 sm:space-y-1 min-w-0">
+          <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-amber-100 text-[11px] sm:text-xs font-semibold">Member Portal</span>
-              <span className="bg-amber-400/30 text-white text-[9px] sm:text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-white/20">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate">
+                Welcome back, {currentUser.displayName || currentUser.name}
+              </h1>
+              <span className="bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
                 {getRoleDisplayName(currentUser.role)}
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight truncate">
-              Welcome back, {currentUser.displayName || currentUser.name} 👋
-            </h1>
-            <p className="text-amber-100 text-[11px] sm:text-xs font-medium truncate">
-              Here is your personal devotional summary, offerings, and scheduled gatherings.
+            <p className="text-slate-500 dark:text-slate-400 text-xs truncate">
+              Here is your personal devotional summary, offerings, and scheduled gatherings
             </p>
           </div>
         </div>
 
         {/* Quick Devotional Metrics */}
-        <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-black/15 p-2 sm:p-3 rounded-2xl border border-white/10 backdrop-blur-xs w-full sm:w-auto">
-          <div className="text-center px-1.5 sm:px-3 border-r border-white/15">
-            <span className="text-[9px] sm:text-[10px] text-amber-200 uppercase font-bold tracking-wider block truncate">My Tasks</span>
-            <span className="text-base sm:text-xl font-black text-white">
+        <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 w-full sm:w-auto shrink-0">
+          <div className="text-center px-2 sm:px-3 border-r border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block truncate">My Tasks</span>
+            <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
               {myActiveTasksCount}
             </span>
           </div>
-          <div className="text-center px-1.5 sm:px-3 border-r border-white/15">
-            <span className="text-[9px] sm:text-[10px] text-amber-200 uppercase font-bold tracking-wider block truncate">Meetings</span>
-            <span className="text-base sm:text-xl font-black text-white">{myMeetings.length}</span>
+          <div className="text-center px-2 sm:px-3 border-r border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block truncate">Meetings</span>
+            <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">{myMeetings.length}</span>
           </div>
-          <div className="text-center px-1.5 sm:px-3">
-            <span className="text-[9px] sm:text-[10px] text-amber-200 uppercase font-bold tracking-wider block truncate">Open Sevas</span>
-            <span className="text-base sm:text-xl font-black text-emerald-300">{opportunities.length}</span>
+          <div className="text-center px-2 sm:px-3">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block truncate">Open Sevas</span>
+            <span className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">{opportunities.length}</span>
           </div>
         </div>
       </div>
