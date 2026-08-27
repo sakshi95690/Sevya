@@ -600,35 +600,39 @@ export const UsersView: React.FC<UsersViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-amber-800 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full text-amber-200 text-xs font-semibold uppercase tracking-wider backdrop-blur-xs border border-amber-400/20">
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
-              Hierarchical Role-Based Access Control
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Staff & Member Directory
+              </h1>
+              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                RBAC
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Staff & Member Management</h1>
-            <p className="text-xs sm:text-sm text-amber-100/90 leading-relaxed">
-              Enforce strict organizational hierarchy:{' '}
-              <strong className="text-amber-300">Super Admin → Temple Admin → Department Head → Coordinator → Member</strong>.
-              All assignments create persistent traceable supervisory chains with role isolation.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Manage organizational hierarchy, supervisory chains, and role assignments
             </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3">
-            {canManageUsers && (
-              <button
-                onClick={() => {
-                  setRole(allowedAssignableRoles[0]?.value || 'member');
-                  setShowModal(true);
-                }}
-                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm rounded-2xl shadow-lg hover:shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
-              >
-                <Plus className="w-4 h-4 text-slate-950" />
-                Provision New User
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {canManageUsers && (
+            <button
+              onClick={() => {
+                setRole(allowedAssignableRoles[0]?.value || 'member');
+                setShowModal(true);
+              }}
+              className="py-2 px-3.5 sm:px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Provision User</span>
+            </button>
+          )}
         </div>
       </div>
 
