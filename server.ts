@@ -478,7 +478,7 @@ async function getUserPermittedMeetingIds(
   const directMeetings = await db
     .select({ id: meetings.id })
     .from(meetings)
-    .where(and(eq(meetings.templeId, tenantId), or(eq(meetings.createdBy, userId), eq(meetings.organizerId, userId))));
+    .where(and(eq(meetings.templeId, tenantId), or(eq(meetings.createdBy, userId), eq(meetings.organizerId, userId), eq(meetings.hostId, userId))));
 
   // 2. Participant in meeting
   const participantRows = await db
@@ -2754,7 +2754,7 @@ app.delete(['/api/v1/admin/users/:id', '/api/users/:id'], requireAuth, async (re
       await db.update(tasks).set({ createdBy: null }).where(eq(tasks.createdBy, id)).catch(() => {});
       await db.update(projects).set({ leadUserId: null }).where(eq(projects.leadUserId, id)).catch(() => {});
       await db.update(projects).set({ createdBy: null }).where(eq(projects.createdBy, id)).catch(() => {});
-      await db.update(meetings).set({ organizerId: null }).where(eq(meetings.organizerId, id)).catch(() => {});
+      await db.update(meetings).set({ organizerId: null, hostId: null }).where(or(eq(meetings.organizerId, id), eq(meetings.hostId, id))).catch(() => {});
       await db.update(meetings).set({ createdBy: null }).where(eq(meetings.createdBy, id)).catch(() => {});
       await db.delete(projectMembers).where(eq(projectMembers.userId, id)).catch(() => {});
       await db.delete(meetingParticipants).where(eq(meetingParticipants.userId, id)).catch(() => {});
@@ -6231,12 +6231,58 @@ app.get(['/api/v1/meetings', '/api/meetings'], requireAuth, async (req: AuthRequ
       return res.json([]);
     }
 
-    const result = await db
+    const meetingRows = await db
       .select()
       .from(meetings)
       .where(inArray(meetings.id, permittedMeetingIds))
       .orderBy(desc(meetings.createdAt));
-    res.json(result);
+
+    // Fetch all participants for these meetings
+    const allParticipants = await db
+      .select()
+      .from(meetingParticipants)
+      .where(inArray(meetingParticipants.meetingId, permittedMeetingIds));
+
+    // Fetch linked action items/tasks
+    const allActionItems = await db
+      .select({ id: actionItems.id, meetingId: actionItems.meetingId })
+      .from(actionItems)
+      .where(inArray(actionItems.meetingId, permittedMeetingIds));
+
+    const participantMap: Record<string, any[]> = {};
+    for (const p of allParticipants) {
+      if (!participantMap[p.meetingId]) participantMap[p.meetingId] = [];
+      participantMap[p.meetingId].push({
+        userId: p.userId,
+        status: p.status || 'present',
+      });
+    }
+
+    const actionItemMap: Record<string, string[]> = {};
+    for (const a of allActionItems) {
+      if (!actionItemMap[a.meetingId]) actionItemMap[a.meetingId] = [];
+      actionItemMap[a.meetingId].push(a.id);
+    }
+
+    const enriched = meetingRows.map((m) => {
+      const hostId = m.hostId || m.organizerId || m.createdBy || req.user!.id;
+      const organizerId = m.organizerId || m.hostId || m.createdBy || req.user!.id;
+      const createdBy = m.createdBy || hostId;
+      const attendance = participantMap[m.id] || [];
+      const actionPointTaskIds = actionItemMap[m.id] || [];
+
+      return {
+        ...m,
+        hostId,
+        organizerId,
+        createdBy,
+        attendance,
+        participants: attendance.map((a) => a.userId),
+        actionPointTaskIds,
+      };
+    });
+
+    res.json(enriched);
   } catch (err: any) {
     return sendRfc7807Error(res, 500, 'Database Error', err.message);
   }
@@ -6245,26 +6291,30 @@ app.get(['/api/v1/meetings', '/api/meetings'], requireAuth, async (req: AuthRequ
 app.post(['/api/v1/meetings', '/api/meetings'], requireAuth, requireRole(['super_admin', 'temple_admin', 'leader']), async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = getEffectiveTenantId(req.user!, req.body.templeId);
-    const { title, date, location, description, agenda, rawNotes, organizerId, projectId, departmentId, actionPoints } = req.body;
+    const { title, date, location, description, agenda, rawNotes, organizerId, projectId, departmentId, actionPoints, time, durationMinutes } = req.body;
 
     if (!title || !date) {
       return sendRfc7807Error(res, 400, 'Bad Request', 'Meeting title and date are required.');
     }
 
+    const hostUserId = req.user!.id;
     const [newMeeting] = await db
       .insert(meetings)
       .values({
         templeId: tenantId,
         title: title.trim(),
         date,
+        time: time || '10:00',
+        durationMinutes: durationMinutes || 45,
         location: location || 'Temple Meeting Hall',
         description: description || '',
         agenda: agenda || '',
         rawNotes: rawNotes || '',
-        organizerId: sanitizeUuid(organizerId) || req.user!.id,
+        organizerId: hostUserId,
+        hostId: hostUserId,
         projectId: sanitizeUuid(projectId) || undefined,
         departmentId: departmentId || 'dept-1',
-        createdBy: req.user!.id,
+        createdBy: hostUserId,
       })
       .returning();
 
@@ -6285,19 +6335,25 @@ app.post(['/api/v1/meetings', '/api/meetings'], requireAuth, requireRole(['super
       }
     }
 
-    await logAuditDb(tenantId, req.user!.id, req.user!.name, req.user!.role, 'MEETING_CREATED', 'meeting', newMeeting.id, `Created meeting "${newMeeting.title}"`, null, newMeeting, req);
+    await logAuditDb(tenantId, req.user!.id, req.user!.name, req.user!.role, 'MEETING_CREATED', 'meeting', newMeeting.id, `Created meeting "${newMeeting.title}" by Host ${req.user!.name}`, null, newMeeting, req);
 
-    res.status(201).json(newMeeting);
+    res.status(201).json({
+      ...newMeeting,
+      hostId: hostUserId,
+      organizerId: hostUserId,
+      createdBy: hostUserId,
+    });
   } catch (err: any) {
     return sendRfc7807Error(res, 500, 'Database Error', err.message);
   }
 });
 
-// Real Zoom Meeting Integration Endpoint (Scoped to User's Personal Integration)
+// Real Zoom Meeting Integration Endpoint (Scoped to User's Personal Integration & Creator Host Assignment)
 app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, requireRole(['super_admin', 'temple_admin', 'leader']), async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = getEffectiveTenantId(req.user!, req.body.templeId);
     const userId = req.user!.id;
+    const userEmail = req.user!.email;
     const { topic, title, date, time, durationMinutes, agenda, rawNotes, projectId, departmentId, actionPoints, participants } = req.body;
 
     const meetingTopic = (topic || title || 'SEVYA Zoom Meeting').trim();
@@ -6310,6 +6366,8 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
       passcode: string;
       joinUrl: string;
       startUrl: string;
+      zoomHostId?: string;
+      zoomHostEmail?: string;
     } | null = null;
 
     // Check user's personal Zoom integration
@@ -6350,7 +6408,7 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
     const zoomAccountId = config.accountId || process.env.ZOOM_ACCOUNT_ID;
     const zoomClientId = config.clientId || process.env.ZOOM_CLIENT_ID;
     const zoomClientSecret = config.clientSecret || process.env.ZOOM_CLIENT_SECRET;
-    const zoomHostEmail = config.hostEmail || req.user!.email;
+    const fallbackHostEmail = config.hostEmail || userEmail;
 
     if (zoomAccountId && zoomClientId && zoomClientSecret) {
       try {
@@ -6363,7 +6421,8 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
         const accessToken = tokenJson.access_token;
 
         if (accessToken) {
-          let createRes = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(zoomHostEmail)}/meetings`, {
+          // Priority 1: Create under the authenticated creator's email so they are the genuine Zoom host
+          let createRes = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(userEmail)}/meetings`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -6378,14 +6437,46 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
               settings: {
                 host_video: true,
                 participant_video: true,
-                join_before_host: true,
+                join_before_host: true, // Prevents "You cannot start the meeting because it is hosted by another user"
+                jbh_time: 0,
                 mute_upon_entry: true,
-                waiting_room: true,
+                waiting_room: false,
+                meeting_authentication: false,
               },
             }),
           });
 
           let zoomJson: any = await createRes.json();
+
+          // Priority 2: If personal user does not exist in Zoom account, try configured host email
+          if (!zoomJson.id && fallbackHostEmail && fallbackHostEmail !== userEmail) {
+            createRes = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(fallbackHostEmail)}/meetings`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                topic: meetingTopic,
+                type: 2,
+                start_time: `${date}T${time || '10:00'}:00Z`,
+                duration: durationMinutes || 45,
+                agenda: agenda || 'SEVYA Temple Management Online Meeting',
+                settings: {
+                  host_video: true,
+                  participant_video: true,
+                  join_before_host: true,
+                  jbh_time: 0,
+                  mute_upon_entry: true,
+                  waiting_room: false,
+                  meeting_authentication: false,
+                },
+              }),
+            });
+            zoomJson = await createRes.json();
+          }
+
+          // Priority 3: Fallback to 'me'
           if (!zoomJson.id) {
             createRes = await fetch('https://api.zoom.us/v2/users/me/meetings', {
               method: 'POST',
@@ -6403,8 +6494,10 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
                   host_video: true,
                   participant_video: true,
                   join_before_host: true,
+                  jbh_time: 0,
                   mute_upon_entry: true,
-                  waiting_room: true,
+                  waiting_room: false,
+                  meeting_authentication: false,
                 },
               }),
             });
@@ -6417,6 +6510,8 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
               passcode: zoomJson.password || '',
               joinUrl: zoomJson.join_url,
               startUrl: zoomJson.start_url || zoomJson.join_url,
+              zoomHostId: zoomJson.host_id || '',
+              zoomHostEmail: zoomJson.host_email || userEmail,
             };
           }
         }
@@ -6437,9 +6532,12 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
         passcode,
         joinUrl: `https://us05web.zoom.us/j/${rawNum}?pwd=${passcode}`,
         startUrl: `https://us05web.zoom.us/s/${rawNum}?zak=${zakToken}&pwd=${passcode}&role=1`,
+        zoomHostId: `zh_${userId.slice(0, 8)}`,
+        zoomHostEmail: userEmail,
       };
     }
 
+    const hostUserId = req.user!.id;
     const [newMeeting] = await db
       .insert(meetings)
       .values({
@@ -6452,7 +6550,10 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
         description: `Zoom Meeting Password: ${zoomData.passcode}\nHost Start URL: ${zoomData.startUrl}\nParticipant Link: ${zoomData.joinUrl}`,
         agenda: agenda || '',
         rawNotes: rawNotes || '',
-        organizerId: req.user!.id,
+        organizerId: hostUserId,
+        hostId: hostUserId,
+        zoomHostId: zoomData.zoomHostId || '',
+        zoomHostEmail: zoomData.zoomHostEmail || userEmail,
         projectId: sanitizeUuid(projectId) || undefined,
         departmentId: departmentId || 'dept-1',
         isZoomMeeting: true,
@@ -6461,7 +6562,7 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
         zoomPassword: zoomData.passcode,
         zoomJoinUrl: zoomData.joinUrl,
         zoomHostUrl: zoomData.startUrl,
-        createdBy: req.user!.id,
+        createdBy: hostUserId,
       })
       .returning();
 
@@ -6500,7 +6601,9 @@ app.post(['/api/v1/meetings/zoom', '/api/zoom/create-meeting'], requireAuth, req
 
     res.status(201).json({
       ...newMeeting,
-      organizerId: req.user!.id,
+      organizerId: hostUserId,
+      hostId: hostUserId,
+      createdBy: hostUserId,
       isZoomMeeting: true,
       meetingPlatform: 'zoom',
       zoomMeetingId: zoomData.meetingId,
@@ -6602,6 +6705,7 @@ app.post(['/api/v1/meetings/google-meet', '/api/google-meet/create-meeting'], re
       meetUrl = `https://meet.google.com/${seg1}-${seg2}-${seg3}`;
     }
 
+    const hostUserId = req.user!.id;
     const [newMeeting] = await db
       .insert(meetings)
       .values({
@@ -6614,13 +6718,14 @@ app.post(['/api/v1/meetings/google-meet', '/api/google-meet/create-meeting'], re
         description: `Google Meet Conference Link: ${meetUrl}\nAgenda: ${agenda || 'SEVYA Meeting'}`,
         agenda: agenda || '',
         rawNotes: rawNotes || '',
-        organizerId: req.user!.id,
+        organizerId: hostUserId,
+        hostId: hostUserId,
         projectId: sanitizeUuid(projectId) || undefined,
         departmentId: departmentId || 'dept-1',
         isGoogleMeet: true,
         meetingPlatform: 'google_meet',
         googleMeetUrl: meetUrl,
-        createdBy: req.user!.id,
+        createdBy: hostUserId,
       })
       .returning();
 
@@ -6659,12 +6764,50 @@ app.post(['/api/v1/meetings/google-meet', '/api/google-meet/create-meeting'], re
 
     res.status(201).json({
       ...newMeeting,
-      organizerId: req.user!.id,
+      organizerId: hostUserId,
+      hostId: hostUserId,
+      createdBy: hostUserId,
       isGoogleMeet: true,
       meetingPlatform: 'google_meet',
       googleMeetUrl: meetUrl,
       time: time || '10:00',
       durationMinutes: durationMinutes || 45,
+    });
+  } catch (err: any) {
+    return sendRfc7807Error(res, 500, 'Database Error', err.message);
+  }
+});
+
+// Start Meeting Endpoint (Verified Host Flow)
+app.post('/api/v1/meetings/:id/start', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const meetingId = req.params.id;
+    const existing = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+    if (existing.length === 0) return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
+
+    const mtg = existing[0];
+    const isHost =
+      req.user!.role === 'super_admin' ||
+      req.user!.role === 'temple_admin' ||
+      mtg.hostId === req.user!.id ||
+      mtg.organizerId === req.user!.id ||
+      mtg.createdBy === req.user!.id;
+
+    if (!isHost) {
+      return res.status(403).json({
+        canStart: false,
+        isHost: false,
+        message: 'You cannot start the meeting because it is hosted by another user.',
+        joinUrl: mtg.zoomJoinUrl || mtg.googleMeetUrl || undefined,
+      });
+    }
+
+    const startUrl = mtg.zoomHostUrl || mtg.zoomJoinUrl || mtg.googleMeetUrl || 'https://zoom.us';
+    res.json({
+      canStart: true,
+      isHost: true,
+      startUrl,
+      joinUrl: mtg.zoomJoinUrl || mtg.googleMeetUrl || undefined,
     });
   } catch (err: any) {
     return sendRfc7807Error(res, 500, 'Database Error', err.message);
@@ -6681,7 +6824,13 @@ app.post('/api/v1/meetings/:id/end', requireAuth, async (req: AuthRequest, res: 
     if (existing.length === 0) return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
 
     const mtg = existing[0];
-    const isHost = req.user!.role === 'super_admin' || req.user!.role === 'temple_admin' || mtg.organizerId === req.user!.id;
+    const isHost =
+      req.user!.role === 'super_admin' ||
+      req.user!.role === 'temple_admin' ||
+      mtg.hostId === req.user!.id ||
+      mtg.organizerId === req.user!.id ||
+      mtg.createdBy === req.user!.id;
+
     if (!isHost) {
       return sendRfc7807Error(res, 403, 'Forbidden', 'Only the host or admin can end this meeting.');
     }
@@ -6714,7 +6863,13 @@ app.post('/api/v1/meetings/:id/host-action', requireAuth, async (req: AuthReques
     if (existing.length === 0) return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
 
     const mtg = existing[0];
-    const isHost = req.user!.role === 'super_admin' || req.user!.role === 'temple_admin' || mtg.organizerId === req.user!.id;
+    const isHost =
+      req.user!.role === 'super_admin' ||
+      req.user!.role === 'temple_admin' ||
+      mtg.hostId === req.user!.id ||
+      mtg.organizerId === req.user!.id ||
+      mtg.createdBy === req.user!.id;
+
     if (!isHost) {
       return sendRfc7807Error(res, 403, 'Forbidden', 'Only the host or admin can perform host actions.');
     }
@@ -6740,7 +6895,13 @@ app.get('/api/v1/meetings/:id', requireAuth, async (req: AuthRequest, res: Respo
 
   const result = await db.select().from(meetings).where(eq(meetings.id, req.params.id)).limit(1);
   if (result.length === 0) return sendRfc7807Error(res, 404, 'Not Found', 'Meeting not found.');
-  res.json(result[0]);
+  const m = result[0];
+  res.json({
+    ...m,
+    hostId: m.hostId || m.organizerId || m.createdBy,
+    organizerId: m.organizerId || m.hostId || m.createdBy,
+    createdBy: m.createdBy || m.hostId,
+  });
 });
 
 // ==========================================
