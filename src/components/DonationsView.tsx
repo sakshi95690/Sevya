@@ -146,29 +146,30 @@ export const DonationsView: React.FC<DonationsViewProps> = ({ temple, currentUse
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Banner */}
-      <div className="bg-gradient-to-r from-amber-900 via-amber-950 to-slate-950 text-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-lg border border-amber-800 space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[10px] bg-amber-400 text-slate-950 px-3 py-1 rounded-full font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-2xs">
-              <HeartHandshake className="w-3.5 h-3.5" /> Official Temple Payment Portal
-            </span>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
-              Temple Sacred Seva & Donations
-            </h2>
-            <p className="text-xs text-amber-200 font-medium max-w-2xl leading-relaxed">
-              Support daily deity worship, mass Anna Prashadam feeding, Gaushala care, and holy seva development.
-            </p>
+      {/* Header Banner */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <HeartHandshake className="w-5 h-5" />
           </div>
-
-          <div className="bg-slate-900/80 border border-amber-500/30 p-3 sm:p-3.5 rounded-2xl text-xs space-y-1 text-amber-200 backdrop-blur-xs shrink-0">
-            <div className="flex items-center gap-1.5 font-bold text-amber-400 text-[10px] sm:text-[11px] uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4 text-amber-400" /> 100% Secure & Tax Exempt
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Temple Sacred Seva & Donations
+              </h1>
+              <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                80G Exempt
+              </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-slate-300">
-              80G Tax Exemption Certificates issued under registered Temple Trust.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Support daily deity worship, Anna Prashadam, Gaushala care, and seva causes
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700/80 shrink-0">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="font-medium text-[11px]">Official Temple Trust Gateway</span>
         </div>
       </div>
 
