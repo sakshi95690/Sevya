@@ -152,7 +152,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -3773,7 +3773,7 @@ app.get('/api/v1/projects/:id/files', requireAuth, async (req: AuthRequest, res:
   }
 });
 
-app.post('/api/v1/projects/:id/files', requireAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
+app.post('/api/v1/projects/:id/files', requireAuth, upload.single('file') as any, async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = getEffectiveTenantId(req.user!);
     const { id } = req.params;
@@ -4571,7 +4571,7 @@ app.post('/api/tasks/:id/remarks', requireAuth, async (req: AuthRequest, res: Re
 // ==================================================
 
 // POST /api/v1/tasks/:taskId/proofs - Upload task proof to S3 / Object Storage
-app.post('/api/v1/tasks/:taskId/proofs', requireAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
+app.post('/api/v1/tasks/:taskId/proofs', requireAuth, upload.single('file') as any, async (req: AuthRequest, res: Response) => {
   try {
     const { taskId } = req.params;
     if (!isValidUuid(taskId)) {
@@ -4829,7 +4829,7 @@ app.get('/api/v1/tasks/:taskId/proofs/:proofId/download-url', requireAuth, async
 });
 
 // PATCH /api/v1/tasks/:taskId/proofs/:proofId/review - Review proof (Approve or Reject)
-app.patch('/api/v1/tasks/:taskId/proofs/:proofId/review', requireAuth, requireRole(['super_admin', 'temple_admin', 'leader']), async (req: AuthRequest, res: Response) => {
+app.patch('/api/v1/tasks/:taskId/proofs/:proofId/review', requireAuth, requireRole(['super_admin', 'temple_admin', 'leader', 'department_head', 'coordinator']), async (req: AuthRequest, res: Response) => {
   try {
     const { taskId, proofId } = req.params;
     const { decision, comment } = req.body;
@@ -5019,7 +5019,7 @@ app.get('/api/v1/storage/status', requireAuth, async (req: AuthRequest, res: Res
 });
 
 // POST /api/v1/storage/upload - Upload file/image/document to Cloudinary (or active storage)
-app.post('/api/v1/storage/upload', requireAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
+app.post('/api/v1/storage/upload', requireAuth, upload.single('file') as any, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return sendRfc7807Error(res, 400, 'Bad Request', 'No file attached. Please attach an image, video, or document.');
