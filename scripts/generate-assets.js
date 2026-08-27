@@ -176,6 +176,8 @@ async function processLogo() {
   await sharp(squareLogo).toFile(path.join(publicDir, 'sevya-logo.png'));
   await sharp(squareLogo).toFile(path.join(publicDir, 'icon-512.png'));
   await sharp(squareLogo).resize(192, 192).toFile(path.join(publicDir, 'icon-192.png'));
+  await sharp(squareLogo).toFile(path.join(publicDir, 'icon-maskable-512.png'));
+  await sharp(squareLogo).resize(192, 192).toFile(path.join(publicDir, 'icon-maskable-192.png'));
   await sharp(squareLogo).resize(192, 192).toFile(path.join(publicDir, 'favicon.png'));
   await sharp(squareLogo).resize(32, 32).toFile(path.join(publicDir, 'favicon-32x32.png'));
   await sharp(squareLogo).resize(48, 48).toFile(path.join(publicDir, 'favicon.ico'));
