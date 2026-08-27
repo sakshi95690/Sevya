@@ -3,135 +3,186 @@ import path from 'path';
 import sharp from 'sharp';
 
 /**
- * EXACT GEOMETRIC RECONSTRUCTION OF THE USER'S "S" LOGO:
- * 
- * The logo is a stylized modern letter "S" formed by two intertwined folding shapes:
- * 1. Top Section (Upper Loop of S):
- *    - Vertical rounded rectangle (top-left r=60)
- *    - Top-right has a swooping wing flap (tangent curve extending right)
- *    - Filled with warm golden saffron gradient (#FFA500 -> #FF7700)
- * 
- * 2. The Center White Ribbon:
- *    - An elegant diagonal white ribbon loop with rounded corner at top-right and sweeping through the center.
- * 
- * 3. The Central & Bottom Section (Spine & Lower Loop of S):
- *    - A diagonal pill/capsule (rotated -45 deg) with a smooth rounded bottom-left tip and center fold shadow.
- *    - Bottom-right base shape completing the bottom loop of the S.
+ * SEVYA Asset Generation & Background Removal Script
+ * Ensures all app logos, icons, and badges are 100% transparent (WhatsApp / Google Drive style)
+ * with zero black, white, or colored background boxes.
  */
-
-const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
-  <defs>
-    <!-- Master Orange Gradient for the S -->
-    <linearGradient id="sGrad" x1="120" y1="80" x2="380" y2="440" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFA400" />
-      <stop offset="35%" stop-color="#FF7B00" />
-      <stop offset="70%" stop-color="#FF5900" />
-      <stop offset="100%" stop-color="#FF4200" />
-    </linearGradient>
-
-    <!-- Top-Right Wing Gradient -->
-    <linearGradient id="sWing" x1="280" y1="90" x2="435" y2="210" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFA812" />
-      <stop offset="100%" stop-color="#FF7800" />
-    </linearGradient>
-
-    <!-- Central Floating Diagonal Capsule Gradient -->
-    <linearGradient id="sCenterPill" x1="160" y1="180" x2="350" y2="360" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FF6B00" />
-      <stop offset="100%" stop-color="#FF3E00" />
-    </linearGradient>
-
-    <!-- Depth Shadow under Central Fold -->
-    <filter id="creaseShadow" x="-20%" y="-20%" width="150%" height="150%">
-      <feDropShadow dx="-5" dy="8" stdDeviation="7" flood-color="#B83200" flood-opacity="0.35" />
-    </filter>
-  </defs>
-
-  <g id="sevya-s-logo" transform="translate(0, 0)">
-    <!-- 1. MAIN BACKGROUND S-BODY SILHOUETTE -->
-    <!-- Top-left rounded corner (r=60), Top edge to x=380, right wing curve to (430,140), down to (360,220), straight down to (360,320), rounded bottom-right (r=50), bottom curve to (240,420), bottom-left rounded cap (r=55), up-left side to (150,280), straight up to (150,150), corner to (210,90) -->
-    <path d="M 210 90
-             C 165 90 150 115 150 155
-             L 150 280
-             C 150 295 142 308 132 318
-             L 118 332
-             C 92 358 92 400 118 426
-             C 144 452 186 452 212 426
-             L 252 386
-             C 264 374 280 368 296 368
-             L 310 368
-             C 340 368 360 348 360 318
-             L 360 215
-             C 360 200 370 185 382 173
-             L 415 140
-             C 436 119 428 90 395 90
-             L 210 90 Z"
-          fill="url(#sGrad)" />
-
-    <!-- 2. TOP RIGHT WING ACCENT -->
-    <path d="M 280 90
-             L 395 90
-             C 428 90 436 119 415 140
-             L 360 195
-             C 360 145 330 90 280 90 Z"
-          fill="url(#sWing)" />
-
-    <!-- 3. WHITE RIBBON S-CURVE (Frame & Negative Space) -->
-    <!-- This creates the distinct looping white ribbon of the letter S -->
-    <path d="M 315 130
-             C 350 130 360 158 360 190
-             C 360 206 352 222 340 234
-             L 220 354
-             C 196 378 166 378 146 358
-             C 126 338 126 308 150 284
-             L 264 170
-             C 280 154 298 130 315 130 Z"
-          fill="#FFFFFF" />
-
-    <!-- 4. INNER ORANGE PILL / FOLDED DIAGONAL SPINE -->
-    <!-- Positioned diagonally across the center to form the folded ribbon S -->
-    <g filter="url(#creaseShadow)">
-      <rect x="195" y="180" width="105" height="195" rx="52.5"
-            transform="rotate(-45 247.5 277.5)"
-            fill="url(#sCenterPill)" />
-    </g>
-
-    <!-- 5. BOTTOM-LEFT ROUNDED CAP OF THE 'S' -->
-    <path d="M 118 332
-             C 92 358 92 400 118 426
-             C 144 452 186 452 212 426
-             L 252 386
-             C 236 374 214 372 198 388
-             L 156 430
-             C 142 444 120 444 106 430
-             C 92 416 92 394 106 380
-             L 132 354
-             L 118 332 Z"
-          fill="url(#sGrad)" />
-  </g>
-</svg>`;
-
-async function build() {
+async function processLogo() {
   const publicDir = path.resolve('public');
-  fs.writeFileSync(path.join(publicDir, 'logo.svg'), svgContent);
-  console.log('Saved logo.svg');
+  const sourcePath = path.join(publicDir, 'logo.jpeg');
 
-  const buf = Buffer.from(svgContent);
+  if (!fs.existsSync(sourcePath)) {
+    console.error('Source logo.jpeg not found');
+    return;
+  }
 
-  await sharp(buf).resize(512, 512).png().toFile(path.join(publicDir, 'logo.png'));
-  await sharp(buf).resize(512, 512).png().toFile(path.join(publicDir, 'icon-512.png'));
-  await sharp(buf).resize(512, 512).flatten({ background: '#FFFFFF' }).jpeg({ quality: 98 }).toFile(path.join(publicDir, 'logo.jpeg'));
-  await sharp(buf).resize(512, 512).flatten({ background: '#FFFFFF' }).jpeg({ quality: 98 }).toFile(path.join(publicDir, 'favicon.jpeg'));
-  await sharp(buf).resize(192, 192).png().toFile(path.join(publicDir, 'icon-192.png'));
-  await sharp(buf).resize(192, 192).png().toFile(path.join(publicDir, 'favicon.png'));
-  await sharp(buf).resize(180, 180).flatten({ background: '#FFFFFF' }).png().toFile(path.join(publicDir, 'apple-touch-icon.png'));
-  await sharp(buf).resize(32, 32).png().toFile(path.join(publicDir, 'favicon-32x32.png'));
-  await sharp(buf).resize(48, 48).png().toFile(path.join(publicDir, 'favicon.ico'));
-  
-  await sharp(buf).resize(380, 380).extend({ top: 66, bottom: 66, left: 66, right: 66, background: '#FFFFFF' }).png().toFile(path.join(publicDir, 'icon-maskable-512.png'));
-  await sharp(buf).resize(140, 140).extend({ top: 26, bottom: 26, left: 26, right: 26, background: '#FFFFFF' }).png().toFile(path.join(publicDir, 'icon-maskable-192.png'));
+  const { data, info } = await sharp(sourcePath).raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
 
-  console.log('All icons and favicons generated successfully!');
+  // Detect background color from the 4 corners
+  const samplePts = [
+    [5, 5],
+    [width - 5, 5],
+    [5, height - 5],
+    [width - 5, height - 5],
+    [0, 0],
+    [width - 1, 0],
+    [0, height - 1],
+    [width - 1, height - 1]
+  ];
+
+  let bgR = 0, bgG = 0, bgB = 0;
+  for (const [sx, sy] of samplePts) {
+    const i = (sy * width + sx) * 3;
+    bgR += data[i];
+    bgG += data[i + 1];
+    bgB += data[i + 2];
+  }
+  bgR /= samplePts.length;
+  bgG /= samplePts.length;
+  bgB /= samplePts.length;
+
+  console.log(`Detected background average RGB: (${Math.round(bgR)}, ${Math.round(bgG)}, ${Math.round(bgB)})`);
+
+  function colorDist(r, g, b) {
+    return Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
+  }
+
+  // BFS flood fill from all perimeter pixels
+  const visited = new Uint8Array(width * height);
+  const isBg = new Uint8Array(width * height);
+  const queue = [];
+
+  for (let x = 0; x < width; x++) {
+    queue.push(x, 0);
+    queue.push(x, height - 1);
+  }
+  for (let y = 0; y < height; y++) {
+    queue.push(0, y);
+    queue.push(width - 1, y);
+  }
+
+  let qHead = 0;
+  while (qHead < queue.length) {
+    const x = queue[qHead++];
+    const y = queue[qHead++];
+    const idx = y * width + x;
+
+    if (visited[idx]) continue;
+    visited[idx] = 1;
+
+    const pIdx = idx * 3;
+    const r = data[pIdx], g = data[pIdx + 1], b = data[pIdx + 2];
+    const dist = colorDist(r, g, b);
+
+    if (dist < 40) {
+      isBg[idx] = 1;
+      if (x > 0 && !visited[idx - 1]) queue.push(x - 1, y);
+      if (x < width - 1 && !visited[idx + 1]) queue.push(x + 1, y);
+      if (y > 0 && !visited[idx - width]) queue.push(x, y - 1);
+      if (y < height - 1 && !visited[idx + width]) queue.push(x, y + 1);
+    }
+  }
+
+  // Also catch enclosed background pockets that match the background color
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!isBg[idx]) {
+        const pIdx = idx * 3;
+        const dist = colorDist(data[pIdx], data[pIdx + 1], data[pIdx + 2]);
+        if (dist < 22) {
+          isBg[idx] = 1;
+        }
+      }
+    }
+  }
+
+  // Build RGBA buffer with alpha anti-aliasing and color despill
+  const rgba = Buffer.alloc(width * height * 4);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const pIdx = idx * 3;
+      const outIdx = idx * 4;
+
+      let r = data[pIdx];
+      let g = data[pIdx + 1];
+      let b = data[pIdx + 2];
+      const dist = colorDist(r, g, b);
+
+      if (isBg[idx] || dist < 16) {
+        rgba[outIdx] = 0;
+        rgba[outIdx + 1] = 0;
+        rgba[outIdx + 2] = 0;
+        rgba[outIdx + 3] = 0;
+      } else if (dist < 36) {
+        const alpha = (dist - 16) / 20; // 0..1
+        const factor = 1 - alpha;
+        r = Math.max(0, Math.min(255, Math.round(r - factor * bgR * 0.7)));
+        g = Math.max(0, Math.min(255, Math.round(g - factor * bgG * 0.7)));
+        b = Math.max(0, Math.min(255, Math.round(b - factor * bgB * 0.7)));
+
+        rgba[outIdx] = r;
+        rgba[outIdx + 1] = g;
+        rgba[outIdx + 2] = b;
+        rgba[outIdx + 3] = Math.round(alpha * 255);
+      } else {
+        rgba[outIdx] = r;
+        rgba[outIdx + 1] = g;
+        rgba[outIdx + 2] = b;
+        rgba[outIdx + 3] = 255;
+      }
+    }
+  }
+
+  // Find tight crop of the foreground logo
+  let minX = width, maxX = 0, minY = height, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const a = rgba[(y * width + x) * 4 + 3];
+      if (a > 15) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  const pad = 12;
+  const cropX = Math.max(0, minX - pad);
+  const cropY = Math.max(0, minY - pad);
+  const cropW = Math.min(width - cropX, maxX - minX + 1 + pad * 2);
+  const cropH = Math.min(height - cropY, maxY - minY + 1 + pad * 2);
+
+  const croppedBuf = await sharp(rgba, { raw: { width, height, channels: 4 } })
+    .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
+    .png()
+    .toBuffer();
+
+  // Create clean square transparent canvas for app-logo styling (WhatsApp / Google Drive style)
+  const squareLogo = await sharp(croppedBuf)
+    .resize(512, 512, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    })
+    .png()
+    .toBuffer();
+
+  // Write all transparent PNG icons
+  await sharp(squareLogo).toFile(path.join(publicDir, 'logo.png'));
+  await sharp(squareLogo).toFile(path.join(publicDir, 'sevya-logo.png'));
+  await sharp(squareLogo).toFile(path.join(publicDir, 'icon-512.png'));
+  await sharp(squareLogo).resize(192, 192).toFile(path.join(publicDir, 'icon-192.png'));
+  await sharp(squareLogo).resize(192, 192).toFile(path.join(publicDir, 'favicon.png'));
+  await sharp(squareLogo).resize(32, 32).toFile(path.join(publicDir, 'favicon-32x32.png'));
+  await sharp(squareLogo).resize(48, 48).toFile(path.join(publicDir, 'favicon.ico'));
+  await sharp(squareLogo).resize(180, 180).toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  await sharp(squareLogo).resize(64, 64).toFile(path.join(publicDir, 'badge.png'));
+
+  console.log('Clean transparent logos generated successfully without any background box!');
 }
 
-build().catch(console.error);
+processLogo().catch(console.error);
