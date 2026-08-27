@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface SevyaLogoProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'icon';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'icon';
   showText?: boolean;
   lightText?: boolean;
   collapsed?: boolean;
@@ -12,8 +12,7 @@ interface SevyaLogoProps {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR SEVYA BRANDING:
- * Directly references the image file /logo.jpeg located inside the frontend /public folder.
- * /public/logo.jpeg is used everywhere across the application (sidebar, welcome screen, header, modals, footers).
+ * Directly renders /logo.jpeg from the public folder across the application.
  */
 export const SEVYA_LOGO_SRC = '/logo.jpeg';
 
@@ -29,21 +28,23 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   const [imgSrc, setImgSrc] = useState<string>(SEVYA_LOGO_SRC);
   const isCollapsed = collapsed || size === 'icon' || !showText;
 
-  const iconSizes = {
+  const iconSizes: Record<string, string> = {
     xs: 'w-6 h-6',
     sm: 'w-8 h-8',
-    md: 'w-9 h-9',
-    lg: 'w-11 h-11',
-    xl: 'w-14 h-14',
-    icon: 'w-9 h-9',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
+    '2xl': 'w-20 h-20',
+    icon: 'w-10 h-10',
   };
 
-  const textSizes = {
+  const textSizes: Record<string, string> = {
     xs: 'text-sm font-black tracking-tight',
     sm: 'text-base font-black tracking-tight',
     md: 'text-xl font-black tracking-tight',
     lg: 'text-2xl font-black tracking-tight',
     xl: 'text-3xl font-black tracking-tight',
+    '2xl': 'text-4xl font-black tracking-tight',
     icon: 'text-base font-black tracking-tight',
   };
 
@@ -53,21 +54,17 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   const colorClass = textColor || defaultTextColor;
 
   const handleImageError = () => {
-    // Graceful fallback chain if /logo.jpeg is missing or unavailable
+    // Fallback if needed
     if (imgSrc === '/logo.jpeg') {
       setImgSrc('/logo.jpg');
     } else if (imgSrc === '/logo.jpg') {
       setImgSrc('/logo.png');
-    } else if (imgSrc === '/logo.png') {
-      setImgSrc('/sevya-logo.png');
-    } else if (imgSrc === '/sevya-logo.png') {
-      setImgSrc('/logo.svg');
     }
   };
 
   const iconElement = (
     <div
-      className={`${iconSizes[size] || 'w-9 h-9'} flex items-center justify-center shrink-0 rounded-lg overflow-hidden transition-transform duration-200`}
+      className={`${iconSizes[size] || 'w-10 h-10'} flex items-center justify-center shrink-0 transition-transform duration-200`}
     >
       <img
         src={imgSrc}
@@ -76,7 +73,7 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
         loading="eager"
         decoding="async"
         referrerPolicy="no-referrer"
-        className="w-full h-full object-contain pointer-events-none select-none rounded-lg"
+        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-xs"
       />
     </div>
   );
@@ -90,7 +87,7 @@ export const SevyaLogo: React.FC<SevyaLogoProps> = ({
   }
 
   return (
-    <div className={`flex items-center gap-2.5 select-none shrink-0 ${className}`}>
+    <div className={`flex items-center gap-3 select-none shrink-0 ${className}`}>
       {iconElement}
 
       <div className="flex flex-col justify-center min-w-0">
