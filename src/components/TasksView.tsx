@@ -19,7 +19,6 @@ import {
   Calendar,
   Pencil,
   ShieldAlert,
-  Sparkles,
   Trash2,
   Users,
   ChevronDown,
