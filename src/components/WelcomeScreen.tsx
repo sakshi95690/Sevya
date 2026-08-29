@@ -1,6 +1,6 @@
 import React from 'react';
 import { SevyaLogo } from './SevyaLogo';
-import { Shield, Sparkles, HeartHandshake, CheckCircle2 } from 'lucide-react';
+import { Shield, HeartHandshake, CheckCircle2 } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onOpenLogin: (step?: 'select' | 'otp_email') => void;
@@ -22,7 +22,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onOpenLogin }) => 
       {/* Hero Body */}
       <main className="max-w-4xl mx-auto w-full my-auto text-center space-y-8 py-10 relative z-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold uppercase tracking-widest shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           Unified Operations & Devotional Platform
         </div>
 
