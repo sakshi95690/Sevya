@@ -16,7 +16,6 @@ import {
   Wrench,
   ShieldCheck,
   Receipt,
-  Sparkles,
   Calendar,
   Layers,
 } from 'lucide-react';
