@@ -10,10 +10,9 @@ import {
   KeyRound,
   RefreshCw,
   ArrowLeft,
-  Sparkles,
 } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, googleAuthProvider } from '../lib/firebase';
+import { auth, googleAuthProvider, isFirebaseConfigured } from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -113,6 +112,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSigningIn(true);
 
     try {
+      if (!isFirebaseConfigured()) {
+        throw { code: 'auth/api-key-not-valid', message: 'Google Sign-In API Key is not configured in this environment.' };
+      }
       const userCredential = await signInWithPopup(auth, googleAuthProvider);
       const idToken = await userCredential.user.getIdToken();
       await googleLogin({ idToken });
