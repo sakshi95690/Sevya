@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '../types';
 import { authApi, LoginPayload, RegisterPayload } from '../services/authApi';
+import { integrationApi } from '../services/integrationApi';
 import { getAccessToken, getRefreshToken, setAuthTokens, setOnAuthFailedListener, getAuthHeader, ApiError } from '../services/apiClient';
 
 interface AuthContextType {
@@ -109,6 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const res = await authApi.refreshToken(storedRefresh);
             saveUserSession(res.user);
             setAccessToken(res.accessToken);
+            integrationApi.syncCalendar().catch(() => {});
           }
         } catch {
           saveUserSession(null);
@@ -131,6 +133,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await authApi.googleLogin(payload);
       saveUserSession(res.user);
       setAccessToken(res.accessToken);
+      // Auto-sync Google Calendar in background seamlessly
+      integrationApi.syncCalendar().catch(() => {});
     } catch (err: any) {
       if (err instanceof ApiError) {
         setError(err.problemDetail?.detail || err.message);
@@ -167,6 +171,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await authApi.verifyOtp({ email, otp });
       saveUserSession(res.user);
       setAccessToken(res.accessToken);
+      // Auto-sync Google Calendar in background seamlessly
+      integrationApi.syncCalendar().catch(() => {});
       return res.user;
     } catch (err: any) {
       if (err instanceof ApiError) {
