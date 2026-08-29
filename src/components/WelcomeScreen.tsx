@@ -3,7 +3,7 @@ import { SevyaLogo } from './SevyaLogo';
 import { Shield, HeartHandshake, CheckCircle2 } from 'lucide-react';
 
 interface WelcomeScreenProps {
-  onOpenLogin: (step?: 'select' | 'otp_email') => void;
+  onOpenLogin: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onOpenLogin }) => {
@@ -63,7 +63,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onOpenLogin }) => 
         {/* Primary CTA - Clean Single Entry Button */}
         <div className="pt-4 max-w-sm mx-auto">
           <button
-            onClick={() => onOpenLogin('select')}
+            onClick={() => onOpenLogin()}
             className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-3 active:scale-98 cursor-pointer"
           >
             <span>Get Started</span>
