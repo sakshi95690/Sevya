@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Send, Copy, RefreshCw, Check, AlertCircle, Mail, MessageSquare, ShieldCheck, User as UserIcon, Globe, FileText } from 'lucide-react';
+import { Send, Copy, RefreshCw, Check, AlertCircle, Mail, MessageSquare, ShieldCheck, User as UserIcon, Globe, FileText } from 'lucide-react';
 import { User, SmartMessagePayload, SmartMessageResult } from '../types';
 import { aiApi } from '../services/aiApi';
 import { getRoleDisplayName } from '../utils/roleHierarchy';
@@ -137,7 +137,7 @@ export const SmartMessageModal: React.FC<SmartMessageModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4 shrink-0">
           <div className="min-w-0 pr-2">
             <h3 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2 truncate">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" /> <span className="truncate">AI Smart Message Assistant</span>
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" /> <span className="truncate">AI Smart Message Assistant</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5 truncate">
               Draft context-aware emails and WhatsApp messages using real Sevya assignment data.
@@ -331,7 +331,7 @@ export const SmartMessageModal: React.FC<SmartMessageModalProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" /> {draftResult ? 'Regenerate Smart Draft' : 'Generate Smart Message'}
+                <Send className="w-4 h-4" /> {draftResult ? 'Regenerate Smart Draft' : 'Generate Smart Message'}
               </>
             )}
           </button>
