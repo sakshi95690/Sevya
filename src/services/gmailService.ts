@@ -1,4 +1,4 @@
-import { auth } from '../lib/firebase.ts';
+import { auth, getFirebaseAuth } from '../lib/firebase.ts';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 let cachedAccessToken: string | null = null;
@@ -44,7 +44,12 @@ export const initGmailAuth = (
   onAuthSuccess?: (user: FirebaseUser, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  return onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
+  const firebaseAuth = getFirebaseAuth();
+  if (!firebaseAuth) {
+    if (onAuthFailure) onAuthFailure();
+    return () => {};
+  }
+  return onAuthStateChanged(firebaseAuth, async (user: FirebaseUser | null) => {
     if (user && cachedAccessToken) {
       if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
     } else {
@@ -58,9 +63,13 @@ export const initGmailAuth = (
  * Trigger Google Sign-In with Gmail Scopes
  */
 export const signInWithGmail = async (): Promise<{ user: FirebaseUser; accessToken: string }> => {
+  const firebaseAuth = getFirebaseAuth();
+  if (!firebaseAuth) {
+    throw new Error('Google Sign-In is not configured yet in this environment.');
+  }
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, getGmailAuthProvider());
+    const result = await signInWithPopup(firebaseAuth, getGmailAuthProvider());
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('Failed to retrieve OAuth access token for Gmail.');
