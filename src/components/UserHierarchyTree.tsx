@@ -15,7 +15,6 @@ import {
   Mail,
   Users,
   Award,
-  Sparkles,
   Maximize2,
   Minimize2,
   Layers,
