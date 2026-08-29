@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   Calendar,
-  Sparkles,
   RefreshCw,
   X,
   FileCheck2,
