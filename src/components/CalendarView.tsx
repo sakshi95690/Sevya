@@ -20,7 +20,6 @@ import {
   Shield,
   UserCheck,
   RotateCcw,
-  Sparkles,
   List as ListIcon,
   Grid,
   CalendarDays,
