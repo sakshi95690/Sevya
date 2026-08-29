@@ -24,8 +24,7 @@ import {
   Grid,
   CalendarDays,
   Check,
-  Loader2,
-  Globe
+  Loader2
 } from 'lucide-react';
 import {
   CalendarEvent,
@@ -527,23 +526,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
 
-  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
-  const [calendarSyncFeedback, setCalendarSyncFeedback] = useState<string | null>(null);
-
-  const handleSyncGoogleCalendar = async () => {
-    try {
-      setIsSyncingCalendar(true);
-      const res = await integrationApi.syncCalendar({ fullSync: true });
-      setCalendarSyncFeedback(res.message || 'Google Calendar synchronization complete.');
-      fetchEvents();
-      setTimeout(() => setCalendarSyncFeedback(null), 5000);
-    } catch (err: any) {
-      alert(`Google Calendar sync error: ${err.message || err}`);
-    } finally {
-      setIsSyncingCalendar(false);
-    }
-  };
-
   // Month View Days Construction (Timezone-safe)
   const monthDays = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -816,26 +798,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               </button>
             </div>
 
-            {/* Sync Google Calendar Button */}
-            <button
-              onClick={handleSyncGoogleCalendar}
-              disabled={isSyncingCalendar}
-              className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
-              title="Sync with connected Google Calendar"
-            >
-              {isSyncingCalendar ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400" />
-                  <span>Syncing...</span>
-                </>
-              ) : (
-                <>
-                  <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Sync Google Cal</span>
-                </>
-              )}
-            </button>
-
             {/* Create Event Button */}
             <button
               onClick={() => handleOpenCreateModal()}
@@ -957,21 +919,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           })}
         </div>
       </div>
-
-      {calendarSyncFeedback && (
-        <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs font-bold flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>{calendarSyncFeedback}</span>
-          </div>
-          <button
-            onClick={() => setCalendarSyncFeedback(null)}
-            className="text-blue-700 dark:text-blue-300 hover:text-blue-900 font-bold ml-3"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* ======================================================== */}
       {/* MOBILE DATE PICKER CAROUSEL (Google Calendar Style Strip) */}
