@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Meeting, Project, Department, User, Task, UserRole } from '../types';
 import {
   Calendar,
-  Sparkles,
   Plus,
   Users,
   MapPin,
@@ -91,7 +90,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
 
   // Role permissions
   const normalizedRole = normalizeRole(currentUser.role);
-  const isVolunteer = normalizedRole === 'volunteer' || normalizedRole === 'devotee';
+  const isVolunteer = normalizedRole === 'member';
   const canCreate = ['super_admin', 'temple_admin', 'leader', 'department_head', 'coordinator', 'facilitator'].includes(normalizedRole);
 
   const isHostUser = (mtg: Meeting) => {
@@ -673,7 +672,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                       id: 'delete',
                       label: 'Delete Meeting',
                       icon: Trash2,
-                      variant: 'danger' as const,
+                      danger: true,
                       onClick: () => {
                         if (confirm(`Delete meeting "${mtg.title}"?`)) {
                           onDeleteMeeting(mtg.id);
@@ -1291,7 +1290,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 <div className="border border-indigo-100 bg-indigo-50/30 rounded-xl p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="font-bold text-indigo-950 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Discussion Notes & Gemini AI Summarizer
+                      Discussion Notes & Gemini AI Summarizer
                     </label>
                     <button
                       type="button"
@@ -1299,7 +1298,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                       onClick={handleRunAiSummary}
                       className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-[11px] inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                     >
-                      {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      {aiLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                       Generate AI MOM
                     </button>
                   </div>
