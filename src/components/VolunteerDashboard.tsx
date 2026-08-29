@@ -3,7 +3,6 @@ import { User, Task, Project, Department, TempleInfo, Meeting, Notification, Vol
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import {
-  Sparkles,
   Heart,
   Calendar,
   Clock,
@@ -218,7 +217,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                       }}
                       className="w-full mt-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                     >
-                      <Sparkles className="w-3.5 h-3.5" /> Sign Up for Seva
+                      Sign Up for Seva
                     </button>
                   </div>
                 ))}
@@ -285,7 +284,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           {/* Quick Actions Card */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3 transition-colors">
             <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Quick Actions
+              Quick Actions
             </h3>
 
             <div className="grid grid-cols-1 gap-2.5">
