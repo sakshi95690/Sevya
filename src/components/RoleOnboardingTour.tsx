@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { UserRole } from '../types';
 import { normalizeRole } from '../utils/roleHierarchy';
 import {
-  Sparkles,
   X,
   ChevronRight,
   ChevronLeft,
@@ -783,7 +782,6 @@ export const RoleOnboardingTour: React.FC<RoleOnboardingTourProps> = ({
           {/* Action Tip Banner */}
           {currentStep.actionTip && (
             <div className="flex items-start gap-2 p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-amber-950 text-[11px] font-semibold leading-normal">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
               <span>{currentStep.actionTip}</span>
             </div>
           )}
