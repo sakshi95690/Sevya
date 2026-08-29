@@ -21,7 +21,6 @@ import {
   Ban,
   Upload,
   Calendar,
-  Sparkles,
   Info,
 } from 'lucide-react';
 
