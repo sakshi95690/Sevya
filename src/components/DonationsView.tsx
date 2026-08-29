@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { TempleInfo, User } from '../types';
 import {
   HeartHandshake,
-  Sparkles,
   ShieldCheck,
   ExternalLink,
   Lock,
