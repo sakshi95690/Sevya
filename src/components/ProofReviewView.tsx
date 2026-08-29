@@ -24,7 +24,6 @@ import {
   LayoutGrid,
   List,
   RefreshCw,
-  Sparkles,
   ChevronDown,
   X,
   Info,
