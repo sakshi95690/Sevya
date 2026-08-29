@@ -15,7 +15,6 @@ import {
   Menu,
   Search,
   UserCheck,
-  Sparkles,
   Megaphone,
   Pin,
   AlertTriangle,
