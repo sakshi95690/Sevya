@@ -169,12 +169,8 @@ export const createPool = () => {
 
 const pgPool = createPool();
 
-const initializePgliteSchema = async (pglite: PGlite) => {
-  if ((pglite as any).waitReady) {
-    await (pglite as any).waitReady;
-  }
-  const statements = [
-    `CREATE TABLE IF NOT EXISTS temples (
+export const ALL_SCHEMA_MIGRATION_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS temples (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
       tagline TEXT DEFAULT '',
@@ -284,6 +280,9 @@ const initializePgliteSchema = async (pglite: PGlite) => {
       zoom_password TEXT DEFAULT '',
       zoom_join_url TEXT DEFAULT '',
       zoom_host_url TEXT DEFAULT '',
+      is_google_meet BOOLEAN DEFAULT false,
+      google_meet_url TEXT DEFAULT '',
+      meeting_platform TEXT DEFAULT 'standard',
       created_by UUID REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -907,7 +906,11 @@ const initializePgliteSchema = async (pglite: PGlite) => {
     `CREATE INDEX IF NOT EXISTS email_otps_is_used_idx ON email_otps(is_used);`
   ];
 
-  for (const stmt of statements) {
+const initializePgliteSchema = async (pglite: PGlite) => {
+  if ((pglite as any).waitReady) {
+    await (pglite as any).waitReady;
+  }
+  for (const stmt of ALL_SCHEMA_MIGRATION_STATEMENTS) {
     try {
       await pglite.exec(stmt);
     } catch (_err) {
@@ -916,32 +919,23 @@ const initializePgliteSchema = async (pglite: PGlite) => {
   }
 };
 
-export async function ensureEmailOtpsTable(): Promise<void> {
-  const statements = [
-    `CREATE TABLE IF NOT EXISTS email_otps (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      email TEXT NOT NULL,
-      otp_hash TEXT NOT NULL,
-      salt TEXT NOT NULL,
-      attempts INTEGER DEFAULT 0 NOT NULL,
-      max_attempts INTEGER DEFAULT 5 NOT NULL,
-      is_used BOOLEAN DEFAULT false NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-    );`,
-    `CREATE INDEX IF NOT EXISTS email_otps_email_idx ON email_otps(email);`,
-    `CREATE INDEX IF NOT EXISTS email_otps_expires_at_idx ON email_otps(expires_at);`,
-    `CREATE INDEX IF NOT EXISTS email_otps_is_used_idx ON email_otps(is_used);`
-  ];
-
-  for (const stmt of statements) {
+export async function ensureAllTablesAndColumns(customTarget?: any): Promise<void> {
+  const runner = customTarget || pool;
+  for (const stmt of ALL_SCHEMA_MIGRATION_STATEMENTS) {
     try {
-      await pool.query(stmt);
+      if (typeof runner.query === 'function') {
+        await runner.query(stmt);
+      } else if (typeof runner.exec === 'function') {
+        await runner.exec(stmt);
+      }
     } catch (_err) {
-      // Safe fallback if index exists or table already present
+      // Safe fallback if index exists or column already present
     }
   }
+}
+
+export async function ensureEmailOtpsTable(): Promise<void> {
+  await ensureAllTablesAndColumns();
 }
 
 export const ALL_PUBLIC_TABLES = [
