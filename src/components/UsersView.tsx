@@ -20,7 +20,6 @@ import {
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight,
-  Sparkles,
   Info,
   Filter,
   Layers,
