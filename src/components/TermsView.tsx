@@ -47,7 +47,7 @@ export const TermsView: React.FC<TermsViewProps> = ({ onNavigate }) => {
           3. User Accounts, Authentication & Security
         </h2>
         <p>
-          Access to certain administrative and seva workflows requires account creation via Email OTP verification, Google Identity Services, or administrative invitation.
+          Access to certain administrative and seva workflows requires account creation via Google Identity Services or administrative invitation.
         </p>
         <div className="space-y-2 text-sm pl-4 border-l-2 border-amber-500/40">
           <p><strong>Account Responsibility:</strong> You are responsible for safeguarding your credentials and for all activities that occur under your session.</p>
