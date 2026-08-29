@@ -11,7 +11,7 @@ import {
   FileCheck,
   MessageSquare,
   UserCheck,
-  Sparkles,
+  HeartHandshake,
   Megaphone,
   Inbox,
   Filter,
@@ -112,7 +112,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
       return <UserCheck className="w-4 h-4 text-teal-600" />;
     }
     if (t.includes('volunteer') || t.includes('seva')) {
-      return <Sparkles className="w-4 h-4 text-orange-600" />;
+      return <HeartHandshake className="w-4 h-4 text-orange-600" />;
     }
     if (t.includes('announcement')) {
       return <Megaphone className="w-4 h-4 text-rose-600" />;
