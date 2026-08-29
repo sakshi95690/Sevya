@@ -1048,7 +1048,7 @@ export async function processQueueJobs(
               ctaText: 'View Task in Sevya',
               ctaUrl: `/tasks`,
             });
-            whatsAppMessage = `🙏 *Hari Om!*\n\nYou have been assigned a new task: *${payload.taskTitle}*\n📌 *Priority:* ${payload.priority.toUpperCase()}\n📅 *Due Date:* ${payload.dueDate || 'Open'}\n\nPlease review and submit proof on SEVYA portal. Thank you for your devoted service! ✨`;
+            whatsAppMessage = `🙏 *Hari Om!*\n\nYou have been assigned a new task: *${payload.taskTitle}*\n📌 *Priority:* ${payload.priority.toUpperCase()}\n📅 *Due Date:* ${payload.dueDate || 'Open'}\n\nPlease review and submit proof on SEVYA portal. Thank you for your devoted service!`;
           }
 
           // 2. Task Completed
@@ -1188,7 +1188,7 @@ export async function processQueueJobs(
               ctaText: 'Access SEVYA Portal',
               ctaUrl: `/dashboard`,
             });
-            whatsAppMessage = `🙏 *Welcome to SEVYA!*\n\nHari Om *${payload.name}*,\nYour account is now active on SEVYA as *${(payload.role || 'Volunteer').replace('_', ' ').toUpperCase()}*.\n\nMay your dedicated seva be blessed! ✨`;
+            whatsAppMessage = `🙏 *Welcome to SEVYA!*\n\nHari Om *${payload.name}*,\nYour account is now active on SEVYA as *${(payload.role || 'Volunteer').replace('_', ' ').toUpperCase()}*.\n\nMay your dedicated seva be blessed!`;
           }
 
           // 8. Announcement Broadcast
@@ -1232,7 +1232,7 @@ export async function processQueueJobs(
               ctaText: 'Open Feedback Desk',
               ctaUrl: `/feedback`,
             });
-            whatsAppMessage = `⭐ *New Feedback Received*\n\n*${payload.subject}*\nCategory: ${payload.category} | Rating: ${payload.rating}/5\nSubmitted by: ${payload.submittedByName}`;
+            whatsAppMessage = `📩 *New Feedback Received*\n\n*${payload.subject}*\nCategory: ${payload.category} | Rating: ${payload.rating}/5\nSubmitted by: ${payload.submittedByName}`;
           }
 
           // 10. Secretary Assigned
