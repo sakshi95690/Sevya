@@ -15,7 +15,6 @@ import {
   UserCheck,
   Building,
   RefreshCw,
-  Sparkles,
   Search,
   Star,
   Shield,
@@ -581,7 +580,6 @@ export const FeedbackView: React.FC = () => {
                           }}
                           className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer py-1"
                         >
-                          <Sparkles className="w-3.5 h-3.5" />
                           {item.adminResponse || item.response ? 'Update Response & Status' : 'Respond to Devotee'}
                         </button>
                       )}
