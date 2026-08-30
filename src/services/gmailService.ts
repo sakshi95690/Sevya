@@ -1,4 +1,4 @@
-import { auth, getFirebaseAuth } from '../lib/firebase.ts';
+import { auth, getFirebaseAuth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 let cachedAccessToken: string | null = null;
