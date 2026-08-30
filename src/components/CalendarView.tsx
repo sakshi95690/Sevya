@@ -607,7 +607,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ======================================================== */}
-      {/* MOBILE GOOGLE CALENDAR HEADER (Clean, Compact, Touch-First)*/}
+      {/* MOBILE CALENDAR HEADER (Clean, Compact, Touch-First)*/}
       {/* ======================================================== */}
       <div className="md:hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-2xs space-y-2.5 transition-colors">
         {/* Top Control Bar */}
@@ -921,7 +921,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* MOBILE DATE PICKER CAROUSEL (Google Calendar Style Strip) */}
+      {/* MOBILE DATE PICKER CAROUSEL (Date Strip) */}
       {/* ======================================================== */}
       <div className="md:hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-2xl shadow-2xs overflow-x-auto flex items-center gap-1.5 no-scrollbar">
         {monthDays.slice(0, 14).map((dayObj) => {
@@ -977,13 +977,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="bg-white rounded-2xl border border-slate-200 p-16 flex flex-col items-center justify-center text-slate-400 shadow-2xs">
             <div className="w-9 h-9 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
             <p className="text-sm font-semibold text-slate-700">Loading SEVYA Calendar & Events...</p>
-            <p className="text-xs text-slate-400 mt-1">Syncing real-time temple schedule</p>
+            <p className="text-xs text-slate-400 mt-1">Fetching temple schedule</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 text-red-800 p-5 rounded-2xl flex items-center gap-3 shadow-2xs">
             <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
             <div>
-              <h3 className="text-sm font-bold">Calendar Sync Error</h3>
+              <h3 className="text-sm font-bold">Calendar Error</h3>
               <p className="text-xs mt-0.5">{error}</p>
             </div>
           </div>
@@ -1108,26 +1108,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleOpenCreateModal(selectedDateStr)}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Add Event for this Day</span>
-                  <span className="sm:hidden">Add Event</span>
-                </button>
               </div>
 
               {selectedDayEvents.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
                   <CalendarIcon className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                   <p className="text-xs font-medium">No events scheduled on this date.</p>
-                  <button
-                    onClick={() => handleOpenCreateModal(selectedDateStr)}
-                    className="mt-2 text-xs font-bold text-amber-600 hover:text-amber-800 cursor-pointer"
-                  >
-                    + Click here to schedule an event
-                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1178,12 +1164,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <CalendarIcon className="w-4 h-4 text-amber-600" />
                 Week Overview: {getHeaderPeriodLabel()}
               </h2>
-              <button
-                onClick={() => handleOpenCreateModal()}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add Event
-              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
@@ -1270,26 +1250,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   {eventsByDate[getLocalDateString(currentDate)]?.length || 0} scheduled event(s)
                 </p>
               </div>
-              <button
-                onClick={() => handleOpenCreateModal(getLocalDateString(currentDate))}
-                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Event for this Day</span>
-                <span className="sm:hidden">Add Event</span>
-              </button>
             </div>
 
             {(eventsByDate[getLocalDateString(currentDate)] || []).length === 0 ? (
               <div className="text-center py-16 text-slate-400">
                 <CalendarIcon className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <p className="text-sm font-semibold text-slate-600">No events scheduled for this day.</p>
-                <button
-                  onClick={() => handleOpenCreateModal(getLocalDateString(currentDate))}
-                  className="mt-3 text-xs font-bold text-amber-600 hover:text-amber-800"
-                >
-                  + Click to Schedule an Event
-                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1373,26 +1339,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   Comprehensive listing ordered by schedule date & time
                 </p>
               </div>
-              <button
-                onClick={() => handleOpenCreateModal()}
-                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Create Event</span>
-                <span className="sm:hidden">Add Event</span>
-              </button>
             </div>
 
             {events.length === 0 ? (
               <div className="text-center py-16 text-slate-400">
                 <ListIcon className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <p className="text-sm font-semibold text-slate-600">No events match your active filters.</p>
-                <button
-                  onClick={() => handleOpenCreateModal()}
-                  className="mt-2 text-xs font-bold text-amber-600 hover:text-amber-800"
-                >
-                  + Add a new event
-                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1952,7 +1904,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       )}
       {/* ======================================================== */}
-      {/* MOBILE FLOATING ACTION BUTTON (Google Calendar Style FAB) */}
+      {/* MOBILE FLOATING ACTION BUTTON (Event FAB) */}
       {/* ======================================================== */}
       <button
         onClick={() => handleOpenCreateModal(selectedDateStr)}
