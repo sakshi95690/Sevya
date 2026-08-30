@@ -115,7 +115,7 @@ export const createPool = () => {
         max: 20,
         min: 2,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 3000,
         allowExitOnIdle: false,
         keepAlive: true,
         keepAliveInitialDelayMillis: 10000,
@@ -133,7 +133,7 @@ export const createPool = () => {
         max: 20,
         min: 2,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 3000,
         allowExitOnIdle: false,
         keepAlive: true,
         keepAliveInitialDelayMillis: 10000,
@@ -1169,7 +1169,7 @@ export const db = new Proxy({} as any, {
   }
 });
 
-export async function checkDatabaseConnection(retries = 2): Promise<boolean> {
+export async function checkDatabaseConnection(retries = 1): Promise<boolean> {
   if (!hasExplicitPostgresConfig) {
     await activatePgliteFallback();
     return true;
@@ -1189,7 +1189,7 @@ export async function checkDatabaseConnection(retries = 2): Promise<boolean> {
     } catch (error: any) {
       if (i < retries) {
         console.warn(`[Sevya DB] Supabase / PostgreSQL connect attempt ${i + 1} failed, retrying...`, error?.message || error);
-        await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+        await new Promise((r) => setTimeout(r, 300 * (i + 1)));
       } else {
         console.warn('[Sevya DB] Supabase / PostgreSQL connectivity check failed, switching to local PGlite engine:', error?.message || error);
         await activatePgliteFallback();
