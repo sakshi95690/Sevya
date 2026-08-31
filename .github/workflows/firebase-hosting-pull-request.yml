@@ -15,22 +15,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
+     - name: Set up Node.js
+       uses: actions/setup-node@v4
+       with:
+       node-version: 22
 
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci || npm install
-          else
-            npm install
-          fi
+      - name: Install Bun
+       uses: oven-sh/setup-bun@v2
+       with:
+      bun-version: latest
+
+     - name: Install dependencies
+       run: bun install --frozen-lockfile
 
       - name: Build preview frontend
-        run: npm run build
+        run: bun run build
         env:
           NODE_ENV: production
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://sevya-backend.onrender.com' }}
