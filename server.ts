@@ -152,7 +152,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -13394,4 +13394,22 @@ app.post(['/api/v1/feedback', '/api/feedback'], requireAuth, async (req: AuthReq
           await notifyUserDb(
             tenantId,
             admin.id,
-            `Nex��X�o�F�]�$0��A����4|�mɩ�Rە�
+            'New Feedback Received',
+            `New feedback submitted by ${req.user!.name}: ${subject.trim()}`,
+            'feedback'
+          );
+        }
+      }
+    } catch (notifErr) {
+      console.warn('Failed to dispatch admin feedback notifications:', notifErr);
+    }
+
+    res.status(201).json(created);
+  } catch (err: any) {
+    return sendRfc7807Error(res, 500, 'Server Error', err.message);
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
