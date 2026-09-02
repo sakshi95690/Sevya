@@ -130,22 +130,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [currentUser.role]);
 
-  // 1. MEMBER / VOLUNTEER DASHBOARD
-  if (currentUser.role === 'member' || currentUser.role === 'volunteer' || currentUser.role === 'devotee') {
-    return (
-      <VolunteerDashboard
-        currentUser={currentUser}
-        tasks={tasks}
-        projects={projects}
-        departments={departments}
-        temple={temple}
-        meetings={meetings}
-        notifications={notifications}
-        onNavigateTab={onNavigateTab}
-      />
-    );
-  }
-
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Helper filters strictly adhering to role boundaries
@@ -402,20 +386,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 3. TEMPLE ADMIN DASHBOARD
+  // 3. TEMPLE ADMIN / OPERATIONS DASHBOARD
   // ══════════════════════════════════════════════════════════════════════════════
-  if (currentUser.role === 'temple_admin') {
+  if (currentUser.role === 'temple_admin' || !['super_admin', 'department_head', 'leader', 'coordinator'].includes(currentUser.role)) {
+    const roleTitle = currentUser.role === 'super_admin' ? 'Super Admin' : currentUser.role === 'temple_admin' ? 'Temple Admin' : getRoleDisplayName(currentUser.role);
     return (
       <div className="space-y-6">
         {/* Auto-Dismiss Greeting Banner */}
-        <AutoDismissBanner name={currentUser.name} templeName={temple.name} roleLabel="Temple Admin" />
+        <AutoDismissBanner name={currentUser.name} templeName={temple.name} roleLabel={roleTitle} />
 
         {/* Clean Header */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-4 transition-colors">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-2xs">
-                <Flame className="w-3 h-3 fill-slate-950 text-slate-950" /> Temple Admin
+                <Flame className="w-3 h-3 fill-slate-950 text-slate-950" /> {roleTitle}
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 {formatDate(todayStr)}
