@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from './components/Header';
+import { Navigation } from './components/Navigation';
 import { DashboardView } from './components/DashboardView';
 import { VolunteerDashboard } from './components/VolunteerDashboard';
 import { TasksView } from './components/TasksView';
@@ -37,6 +38,7 @@ import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { api } from './services/api';
+import { normalizeRole } from './utils/roleHierarchy';
 import {
   User,
   Task,
@@ -54,7 +56,6 @@ import {
   UserRole,
   UserAccountStatus,
 } from './types';
-import { normalizeRole } from './utils/roleHierarchy';
 
 const defaultTemple: TempleInfo = {
   id: 'temple_main',
@@ -290,7 +291,7 @@ export function App() {
         announcements={announcements}
         onSwitchRoleUser={(selectedUser) => {
           setCurrentUser(selectedUser);
-          if (switchUser) switchUser(selectedUser);
+          if (switchUser && selectedUser?.id) switchUser(selectedUser.id, selectedUser.role);
           showSuccess(`Switched active view to ${selectedUser.name} (${selectedUser.role})`);
         }}
         onMarkAllNotificationsRead={async () => {
@@ -357,7 +358,7 @@ export function App() {
         <main className="flex-1 min-w-0 pb-12">
           {/* Dashboard View */}
           {activeTab === 'dashboard' && (
-            currentUser.role === 'member' ? (
+            normalizeRole(currentUser?.role) === 'member' ? (
               <VolunteerDashboard
                 currentUser={currentUser}
                 tasks={tasks}
