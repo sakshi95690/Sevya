@@ -346,9 +346,17 @@ export function App() {
         <Navigation
           activeTab={activeTab}
           setActiveTab={handleTabChange}
-          userRole={currentUser.role}
+          currentUser={currentUser}
+          temple={temple}
+          userRole={currentUser?.role}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onOpenProfile={() => {
+            setSelectedProfileUser(currentUser);
+            setIsProfileModalOpen(true);
+          }}
+          onOpenLogout={() => setIsLogoutModalOpen(true)}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
           myTasksCount={myActiveTasksCount}
           pendingProofsCount={pendingProofsCount}
           unreadAnnouncementsCount={unreadAnnouncementsCount}
