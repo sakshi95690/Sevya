@@ -358,36 +358,19 @@ export function App() {
         <main className="flex-1 min-w-0 pb-12">
           {/* Dashboard View */}
           {activeTab === 'dashboard' && (
-            normalizeRole(currentUser?.role) === 'member' ? (
-              <VolunteerDashboard
-                currentUser={currentUser}
-                tasks={tasks}
-                projects={projects}
-                departments={departments}
-                temple={temple}
-                meetings={meetings}
-                notifications={notifications}
-                onNavigateTab={handleTabChange}
-                onOpenProfile={() => {
-                  setSelectedProfileUser(currentUser);
-                  setIsProfileModalOpen(true);
-                }}
-              />
-            ) : (
-              <DashboardView
-                stats={dashboardStats}
-                tasks={tasks}
-                projects={projects}
-                departments={departments}
-                users={usersList}
-                currentUser={currentUser}
-                temple={temple}
-                meetings={meetings}
-                notifications={notifications}
-                onOpenProofModal={(task) => setSelectedTaskForProof(task)}
-                onNavigateTab={handleTabChange}
-              />
-            )
+            <DashboardView
+              stats={dashboardStats}
+              tasks={tasks}
+              projects={projects}
+              departments={departments}
+              users={usersList}
+              currentUser={currentUser}
+              temple={temple}
+              meetings={meetings}
+              notifications={notifications}
+              onOpenProofModal={(task) => setSelectedTaskForProof(task)}
+              onNavigateTab={handleTabChange}
+            />
           )}
 
           {/* Tasks & Seva View */}
