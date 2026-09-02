@@ -60,7 +60,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const navItems: NavItem[] = [
     {
       id: 'dashboard',
-      label: normalizedUserRole === 'member' ? 'Seva Portal' : 'Dashboard',
+      label: 'Dashboard',
       icon: LayoutDashboard,
       category: 'Core',
     },
@@ -112,7 +112,6 @@ export const Navigation: React.FC<NavigationProps> = ({
       id: 'approvals',
       label: 'Approvals',
       icon: ShieldCheck,
-      roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'],
       category: 'Operations',
     },
     {
@@ -120,42 +119,36 @@ export const Navigation: React.FC<NavigationProps> = ({
       label: 'Proof Review',
       icon: FileCheck2,
       badge: pendingProofsCount > 0 ? pendingProofsCount : undefined,
-      roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'],
       category: 'Operations',
     },
     {
       id: 'recurring_tasks',
       label: 'Recurring Sevas',
       icon: Repeat,
-      roles: ['super_admin', 'temple_admin', 'department_head', 'coordinator'],
       category: 'Operations',
     },
     {
       id: 'secretaries',
       label: 'Secretary Desk',
       icon: UserCheck,
-      roles: ['super_admin', 'temple_admin', 'department_head'],
       category: 'Operations',
     },
     {
       id: 'workflows',
       label: 'Automations',
       icon: GitBranch,
-      roles: ['super_admin', 'temple_admin'],
       category: 'Administration',
     },
     {
       id: 'users',
       label: 'Devotees & Roles',
       icon: Users,
-      roles: ['super_admin', 'temple_admin', 'department_head'],
       category: 'Administration',
     },
     {
       id: 'reports',
       label: 'Reports & Audits',
       icon: BarChart3,
-      roles: ['super_admin', 'temple_admin', 'department_head'],
       category: 'Administration',
     },
     {
@@ -174,15 +167,11 @@ export const Navigation: React.FC<NavigationProps> = ({
       id: 'settings',
       label: 'Temple Settings',
       icon: Settings,
-      roles: ['super_admin', 'temple_admin'],
       category: 'Administration',
     },
   ];
 
-  const visibleItems = navItems.filter((item) => {
-    if (!item.roles) return true;
-    return item.roles.includes(normalizedUserRole);
-  });
+  const visibleItems = navItems;
 
   const categories = Array.from(new Set(visibleItems.map((i) => i.category || 'Core')));
 
