@@ -346,17 +346,9 @@ export function App() {
         <Navigation
           activeTab={activeTab}
           setActiveTab={handleTabChange}
-          currentUser={currentUser}
-          temple={temple}
-          userRole={currentUser?.role}
+          userRole={currentUser.role}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
-          onOpenProfile={() => {
-            setSelectedProfileUser(currentUser);
-            setIsProfileModalOpen(true);
-          }}
-          onOpenLogout={() => setIsLogoutModalOpen(true)}
-          onOpenAuth={() => setIsAuthModalOpen(true)}
           myTasksCount={myActiveTasksCount}
           pendingProofsCount={pendingProofsCount}
           unreadAnnouncementsCount={unreadAnnouncementsCount}
@@ -366,19 +358,36 @@ export function App() {
         <main className="flex-1 min-w-0 pb-12">
           {/* Dashboard View */}
           {activeTab === 'dashboard' && (
-            <DashboardView
-              stats={dashboardStats}
-              tasks={tasks}
-              projects={projects}
-              departments={departments}
-              users={usersList}
-              currentUser={currentUser}
-              temple={temple}
-              meetings={meetings}
-              notifications={notifications}
-              onOpenProofModal={(task) => setSelectedTaskForProof(task)}
-              onNavigateTab={handleTabChange}
-            />
+            currentUser.role === 'member' ? (
+              <VolunteerDashboard
+                currentUser={currentUser}
+                tasks={tasks}
+                projects={projects}
+                departments={departments}
+                temple={temple}
+                meetings={meetings}
+                notifications={notifications}
+                onNavigateTab={handleTabChange}
+                onOpenProfile={() => {
+                  setSelectedProfileUser(currentUser);
+                  setIsProfileModalOpen(true);
+                }}
+              />
+            ) : (
+              <DashboardView
+                stats={dashboardStats}
+                tasks={tasks}
+                projects={projects}
+                departments={departments}
+                users={usersList}
+                currentUser={currentUser}
+                temple={temple}
+                meetings={meetings}
+                notifications={notifications}
+                onOpenProofModal={(task) => setSelectedTaskForProof(task)}
+                onNavigateTab={handleTabChange}
+              />
+            )
           )}
 
           {/* Tasks & Seva View */}
